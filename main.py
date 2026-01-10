@@ -876,13 +876,24 @@ def main(page: ft.Page):
                 dlg.open = False
                 page.update()
             
+            def copiar_reporte(ev):
+                page.set_clipboard(texto_reporte)
+                page.snack_bar = ft.SnackBar(ft.Text("✅ Copiado al portapapeles"), bgcolor="#4caf50")
+                page.snack_bar.open = True
+                page.update()
+            
+            txt_reporte = ft.TextField(value=texto_reporte, multiline=True, read_only=True, min_lines=10, max_lines=12)
+            
             dlg = ft.AlertDialog(
                 modal=True,
                 title=ft.Text("📄 Reporte para Imprimir"),
                 content=ft.Column([
-                    ft.Text("Seleccione todo (Ctrl+A), copie (Ctrl+C) y pegue en Word:", size=12),
-                    ft.TextField(value=texto_reporte, multiline=True, read_only=True, min_lines=12, max_lines=15)
-                ], tight=True, width=350),
+                    ft.Text("Toque 'Copiar' y pegue en Word o WhatsApp:", size=12),
+                    txt_reporte,
+                    ft.Row([
+                        ft.ElevatedButton("📋 Copiar Todo", bgcolor="#2196f3", color="white", on_click=copiar_reporte),
+                    ], alignment=ft.MainAxisAlignment.CENTER)
+                ], tight=True, width=350, spacing=10),
                 actions=[ft.TextButton("Cerrar", on_click=cerrar)]
             )
             page.overlay.append(dlg)
