@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.5.7"
+    VERSION = "1.5.8"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -1008,6 +1008,34 @@ def main(page: ft.Page):
             lbl_resumen.value = ""
             page.update()
         
+        def copiar_reporte(e):
+            """Copia el reporte al portapapeles"""
+            if not visitas_resultado:
+                mostrar_mensaje("Primero busque boletas", True)
+                return
+            
+            # Generar texto
+            tiempo_total = db.calcular_tiempo_total(visitas_resultado)
+            lineas = [
+                f"REPORTE DE VISITAS",
+                f"Cliente: {cliente_seleccionado['nombre']}",
+                f"Período: {txt_desde.value} al {txt_hasta.value}",
+                f"Total: {len(visitas_resultado)} visitas | {db.formatear_duracion(tiempo_total)}",
+                ""
+            ]
+            for v in visitas_resultado:
+                lineas.append(f"---")
+                lineas.append(f"Boleta #{v.get('id')} | {v.get('fecha')} {v.get('hora_inicio')}")
+                lineas.append(f"Duración: {db.formatear_duracion(v.get('duracion_minutos', 0))}")
+                lineas.append(f"Técnico: {v.get('soportista_nombre', '')}")
+                lineas.append(f"Trabajo: {v.get('trabajo_realizado', '')}")
+            
+            texto = "\n".join(lineas)
+            
+            # Copiar - forma simple de Flet
+            page.set_clipboard(texto)
+            mostrar_mensaje("✅ Reporte copiado al portapapeles")
+        
         def enviar_reporte(e):
             try:
                 print("DEBUG: Iniciando enviar_reporte()")
@@ -1050,7 +1078,10 @@ def main(page: ft.Page):
                     contenedor_cliente,
                     ft.Row([txt_desde, btn_cal_desde, txt_hasta, btn_cal_hasta], spacing=2, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     ft.ElevatedButton("Buscar", icon=ft.Icons.SEARCH, bgcolor="#2196f3", color="white", width=float("inf"), on_click=buscar),
-                    ft.ElevatedButton("📧 Enviar Reporte por Correo", bgcolor="#4caf50", color="white", width=float("inf"), on_click=enviar_reporte, tooltip="Enviar reporte al cliente"),
+                    ft.Row([
+                        ft.ElevatedButton("📋 Copiar Reporte", bgcolor="#ff9800", color="white", expand=True, on_click=copiar_reporte),
+                        ft.ElevatedButton("📧 Enviar Correo", bgcolor="#4caf50", color="white", expand=True, on_click=enviar_reporte),
+                    ], spacing=10),
                     lbl_resumen,
                     lista
                 ], spacing=12),
