@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.1.0"
+    VERSION = "1.1.1"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -751,51 +751,30 @@ def main(page: ft.Page):
                     )
                 )
             
-            # Lista de visitas
+            # Lista de visitas - SIMPLIFICADO
             for v in visitas_resultado:
-                # Obtener datos con valores por defecto si no existen
-                boleta_id = v.get('id') or '?'
-                fecha = v.get('fecha') or 'Sin fecha'
-                hora = v.get('hora_inicio') or '??:??'
-                duracion = v.get('duracion_minutos') or 0
-                soportista = v.get('soportista_nombre') or 'SIN TÉCNICO'
-                trabajo = v.get('trabajo_realizado') or '(sin detalle)'
-                persona_atendida = (v.get('persona_atendida') or '').strip()
-                tiene_pendiente = v.get('tiene_pendiente') and not v.get('pendiente_resuelto')
+                boleta_id = v.get('id', '?')
+                fecha = v.get('fecha', 'Sin fecha')
+                hora = v.get('hora_inicio', '??:??')
+                duracion = v.get('duracion_minutos', 0)
+                soportista = v.get('soportista_nombre', 'SIN TÉCNICO')
+                trabajo = v.get('trabajo_realizado', '(sin detalle)')
                 
-                # Texto de info completo
-                info_linea = f"🕐 {hora}  ⏱️ {db.formatear_duracion(duracion)}  👷 {soportista}"
-                if persona_atendida:
-                    info_linea += f"  👤 {persona_atendida}"
-                
-                lista.controls.append(
-                    ft.Container(
+                # Crear Card simple
+                card = ft.Card(
+                    content=ft.Container(
                         content=ft.Column([
-                            ft.Text(f"📋 Boleta #{boleta_id}  -  {fecha}", size=15, weight=ft.FontWeight.BOLD, color="#2196f3"),
-                            ft.Text(info_linea, size=12, color="#555"),
-                            ft.Container(
-                                content=ft.Text(trabajo, size=13),
-                                bgcolor="#f5f5f5",
-                                border_radius=5,
-                                padding=10
-                            ),
-                            ft.Container(
-                                content=ft.Text(f"⚠️ PENDIENTE: {v.get('descripcion_pendiente', '')}", size=12, color="#ff9800"),
-                                bgcolor="#fff3cd",
-                                border_radius=5,
-                                padding=8,
-                                visible=tiene_pendiente
-                            ),
+                            ft.Text(f"📋 Boleta #{boleta_id} - {fecha}", size=14, weight=ft.FontWeight.BOLD, color="#1976d2"),
+                            ft.Text(f"🕐 {hora}  ⏱️ {db.formatear_duracion(duracion)}  👷 {soportista}", size=12, color="#666"),
+                            ft.Divider(height=1),
+                            ft.Text(trabajo, size=13),
                         ], spacing=5),
-                        bgcolor="white",
-                        border_radius=10,
-                        padding=15,
-                        margin=ft.margin.only(bottom=10),
-                        border=ft.border.all(1, "#e0e0e0"),
+                        padding=12
                     )
                 )
+                lista.controls.append(card)
             
-                
+            
             
             if not visitas_resultado:
                 lista.controls.append(
