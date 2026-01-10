@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.2.7"
+    VERSION = "1.2.8"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -112,24 +112,28 @@ def main(page: ft.Page):
         contenido = ft.Column([
             # Header con botón reconectar
             ft.Container(
-                content=ft.Stack([
-                    ft.Column([
-                        ft.Text("📋 PcGraf-Soporte", size=28, weight=ft.FontWeight.BOLD, color="white"),
-                        ft.Text("Gestión de Visitas Técnicas", size=14, color="#ffffffcc"),
-                        ft.Text(f"v{VERSION}", size=10, color="#ffffff88")
-                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                    ft.Container(
-                        content=ft.IconButton(
-                            icon=ft.Icons.REFRESH,
-                            icon_color="white",
-                            tooltip="Reconectar",
-                            on_click=reconectar
-                        ),
-                        alignment=ft.alignment.top_right
-                    )
+                content=ft.Column([
+                    ft.Row([
+                        ft.Container(expand=True),  # Espaciador izquierdo
+                        ft.Column([
+                            ft.Text("📋 PcGraf-Soporte", size=28, weight=ft.FontWeight.BOLD, color="white"),
+                            ft.Text("Gestión de Visitas Técnicas", size=14, color="#ffffffcc"),
+                            ft.Text(f"v{VERSION}", size=10, color="#ffffff88")
+                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                        ft.Container(
+                            content=ft.IconButton(
+                                icon=ft.Icons.REFRESH,
+                                icon_color="white",
+                                tooltip="Reconectar",
+                                on_click=reconectar
+                            ),
+                            expand=True,
+                            alignment=ft.Alignment(1, -1)  # Derecha arriba
+                        )
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
                 ]),
                 bgcolor="#2196f3",
-                padding=30,
+                padding=20,
                 width=float("inf")
             ),
             
