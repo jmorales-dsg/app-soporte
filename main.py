@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.4.1"
+    VERSION = "1.4.2"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -1022,7 +1022,8 @@ def main(page: ft.Page):
             )
             mostrar_mensaje(msg, not ok)
         
-        def exportar_pdf(e):
+        async def exportar_pdf(e):
+            """Usa Web Share API nativa de iOS/Android para compartir"""
             if not visitas_resultado:
                 mostrar_mensaje("Primero busque boletas", True)
                 return
@@ -1031,58 +1032,59 @@ def main(page: ft.Page):
             tiempo_total = db.calcular_tiempo_total(visitas_resultado)
             
             lineas = [
-                "══════════════════════════════════",
-                "   REPORTE DE VISITAS - PcGraf",
-                "══════════════════════════════════",
+                "══════════════════════════════",
+                "REPORTE DE VISITAS - PcGraf",
+                "══════════════════════════════",
                 "",
                 f"Cliente: {cliente_seleccionado['nombre']}",
                 f"Período: {txt_desde.value} al {txt_hasta.value}",
+                f"Total: {len(visitas_resultado)} visitas | {db.formatear_duracion(tiempo_total)}",
                 "",
-                f"📊 RESUMEN: {len(visitas_resultado)} visitas | {db.formatear_duracion(tiempo_total)} total",
-                "",
-                "──────────────────────────────────",
             ]
             
             for v in visitas_resultado:
-                lineas.append("")
-                lineas.append(f"▶ BOLETA #{v.get('id', '?')}")
-                lineas.append(f"  Fecha: {v.get('fecha', '')} | Hora: {v.get('hora_inicio', '')}")
-                lineas.append(f"  Duración: {db.formatear_duracion(v.get('duracion_minutos', 0))}")
-                lineas.append(f"  Técnico: {v.get('soportista_nombre', '')}")
+                lineas.append(f"─────────────────")
+                lineas.append(f"Boleta #{v.get('id', '?')} | {v.get('fecha', '')} {v.get('hora_inicio', '')}")
+                lineas.append(f"Duración: {db.formatear_duracion(v.get('duracion_minutos', 0))} | Técnico: {v.get('soportista_nombre', '')}")
                 if v.get('persona_atendida'):
-                    lineas.append(f"  Atendido: {v.get('persona_atendida')}")
-                lineas.append(f"  Trabajo: {v.get('trabajo_realizado', '')}")
+                    lineas.append(f"Atendido: {v.get('persona_atendida')}")
+                lineas.append(f"Trabajo: {v.get('trabajo_realizado', '')}")
                 if v.get('tiene_pendiente') and not v.get('pendiente_resuelto'):
-                    lineas.append(f"  ⚠️ PENDIENTE: {v.get('descripcion_pendiente', '')}")
-                lineas.append("──────────────────────────────────")
+                    lineas.append(f"⚠️ PENDIENTE: {v.get('descripcion_pendiente', '')}")
             
             lineas.append("")
             lineas.append(f"Generado: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
             
             texto = "\n".join(lineas)
+            titulo = f"Reporte {cliente_seleccionado['nombre']} - {txt_desde.value}"
             
-            def cerrar(ev):
-                dlg.open = False
-                page.update()
+            # Usar Web Share API (funciona en iOS y Android)
+            js_code = f'''
+            (async () => {{
+                if (navigator.share) {{
+                    try {{
+                        await navigator.share({{
+                            title: "{titulo}",
+                            text: `{texto.replace('`', "'").replace(chr(10), '\\n')}`
+                        }});
+                        return 'ok';
+                    }} catch(e) {{
+                        return 'cancelled';
+                    }}
+                }} else {{
+                    return 'not_supported';
+                }}
+            }})()
+            '''
             
-            dlg = ft.AlertDialog(
-                modal=True,
-                title=ft.Text("📄 Reporte de Visitas"),
-                content=ft.Column([
-                    ft.Text("Seleccione todo el texto y cópielo:", size=12, color="#666"),
-                    ft.TextField(
-                        value=texto, 
-                        multiline=True, 
-                        min_lines=15, 
-                        max_lines=20,
-                        text_size=11
-                    )
-                ], tight=True, width=350, spacing=10),
-                actions=[ft.TextButton("Cerrar", on_click=cerrar)]
-            )
-            page.overlay.append(dlg)
-            dlg.open = True
-            page.update()
+            try:
+                result = await page.run_javascript_async(js_code)
+                if result == 'ok':
+                    mostrar_mensaje("✅ Reporte compartido")
+                elif result == 'not_supported':
+                    mostrar_mensaje("Este navegador no soporta compartir. Use 'Enviar Correo'.", True)
+            except Exception as ex:
+                mostrar_mensaje(f"Error: {str(ex)}", True)
         
         page.add(
             crear_appbar("Consultar Boletas"),
@@ -1092,7 +1094,7 @@ def main(page: ft.Page):
                     ft.Row([txt_desde, btn_cal_desde, txt_hasta, btn_cal_hasta], spacing=2, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     ft.ElevatedButton("Buscar", icon=ft.Icons.SEARCH, bgcolor="#2196f3", color="white", width=float("inf"), on_click=buscar),
                     ft.Row([
-                        ft.ElevatedButton("📄 Exportar PDF", bgcolor="#ff9800", color="white", expand=True, on_click=exportar_pdf, tooltip="Descargar reporte como PDF"),
+                        ft.ElevatedButton("📤 Compartir", bgcolor="#ff9800", color="white", expand=True, on_click=exportar_pdf, tooltip="Compartir reporte"),
                         ft.ElevatedButton("📧 Enviar Correo", bgcolor="#4caf50", color="white", expand=True, on_click=enviar_reporte, tooltip="Enviar reporte por correo"),
                     ], spacing=10),
                     lbl_resumen,
