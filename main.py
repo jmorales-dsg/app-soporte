@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # Configuración de la página
-    page.title = "App Soporte"
+    page.title = "PcGraf-Soporte"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.padding = 0
     page.window_width = 450
@@ -94,7 +94,7 @@ def main(page: ft.Page):
             # Header
             ft.Container(
                 content=ft.Column([
-                    ft.Text("📋 App Soporte", size=28, weight=ft.FontWeight.BOLD, color="white"),
+                    ft.Text("📋 PcGraf-Soporte", size=28, weight=ft.FontWeight.BOLD, color="white"),
                     ft.Text("Gestión de Visitas Técnicas", size=14, color="#ffffffcc")
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                 bgcolor="#2196f3",
@@ -138,12 +138,13 @@ def main(page: ft.Page):
             lista.controls.clear()
             clientes = db.obtener_clientes()
             for c in clientes:
+                soportista_txt = f"👷 {c.get('soportista_nombre', 'Sin asignar')}" if c.get('soportista_nombre') else ""
                 lista.controls.append(
                     ft.Container(
                         content=ft.ListTile(
                             leading=ft.Icon(ft.Icons.BUSINESS, color="#2196f3"),
                             title=ft.Text(c['nombre'], weight=ft.FontWeight.W_500),
-                            subtitle=ft.Text(f"📧 {c['correo'] or '-'}  📞 {c['telefono'] or '-'}", size=12),
+                            subtitle=ft.Text(f"📧 {c['correo'] or '-'}  📞 {c['telefono'] or '-'}  {soportista_txt}", size=12),
                             trailing=ft.Row([
                                 ft.IconButton(ft.Icons.EDIT, on_click=lambda e, id=c['id']: editar_cliente(id)),
                                 ft.IconButton(ft.Icons.DELETE, icon_color="#f44336", 
@@ -193,16 +194,33 @@ def main(page: ft.Page):
         page.clean()
         
         cliente = db.obtener_cliente(id) if id else {}
+        soportistas = db.obtener_soportistas()
         
         txt_nombre = ft.TextField(label="Nombre *", value=cliente.get('nombre', ''), border_radius=10)
         txt_correo = ft.TextField(label="Correo", value=cliente.get('correo', ''), border_radius=10, keyboard_type=ft.KeyboardType.EMAIL)
         txt_telefono = ft.TextField(label="Teléfono", value=cliente.get('telefono', ''), border_radius=10, keyboard_type=ft.KeyboardType.PHONE)
         
+        # Dropdown de soportista asignado
+        dd_soportista = ft.Dropdown(
+            label="Soportista Asignado",
+            options=[ft.dropdown.Option(key="", text="-- Sin asignar --")] + 
+                    [ft.dropdown.Option(key=str(s['id']), text=s['nombre']) for s in soportistas],
+            value=str(cliente.get('soportista_id', '')) if cliente.get('soportista_id') else "",
+            border_radius=10
+        )
+        
         def guardar(e):
             if not txt_nombre.value.strip():
                 mostrar_mensaje("El nombre es requerido", True)
                 return
-            db.guardar_cliente(txt_nombre.value.strip(), txt_correo.value.strip(), txt_telefono.value.strip(), id)
+            soportista_id = int(dd_soportista.value) if dd_soportista.value else None
+            db.guardar_cliente(
+                txt_nombre.value.strip(), 
+                txt_correo.value.strip(), 
+                txt_telefono.value.strip(), 
+                soportista_id,
+                id
+            )
             mostrar_mensaje("Cliente guardado")
             ir_clientes()
         
@@ -213,6 +231,7 @@ def main(page: ft.Page):
                     txt_nombre,
                     txt_correo,
                     txt_telefono,
+                    dd_soportista,
                     ft.ElevatedButton(
                         "Guardar",
                         icon=ft.Icons.SAVE,
@@ -315,33 +334,59 @@ def main(page: ft.Page):
         visita = db.obtener_visita(id) if id else {}
         
         # Cargar datos para dropdowns
-        clientes = db.obtener_clientes()
         soportistas = db.obtener_soportistas()
         
-        if not clientes:
-            mostrar_mensaje("Primero registre clientes", True)
-            ir_clientes()
-            return
         if not soportistas:
             mostrar_mensaje("Primero registre soportistas", True)
             ir_soportistas()
             return
         
-        # Dropdown de clientes
+        # Variable para almacenar clientes filtrados
+        clientes_actuales = []
+        
+        # Dropdown de clientes (se llenará al seleccionar soportista)
         dd_cliente = ft.Dropdown(
             label="Cliente *",
-            options=[ft.dropdown.Option(key=str(c['id']), text=c['nombre']) for c in clientes],
-            value=str(visita.get('cliente_id', '')),
+            options=[],
+            value=str(visita.get('cliente_id', '')) if visita.get('cliente_id') else "",
             border_radius=10
         )
+        
+        # Checkbox para ver todos los clientes
+        chk_ver_todos = ft.Checkbox(label="Ver todos los clientes", value=False)
         
         # Dropdown de soportistas
         dd_soportista = ft.Dropdown(
             label="Técnico *",
             options=[ft.dropdown.Option(key=str(s['id']), text=s['nombre']) for s in soportistas],
-            value=str(visita.get('soportista_id', '')),
+            value=str(visita.get('soportista_id', '')) if visita.get('soportista_id') else "",
             border_radius=10
         )
+        
+        def actualizar_clientes(e=None):
+            """Actualiza la lista de clientes según el soportista seleccionado"""
+            nonlocal clientes_actuales
+            
+            if chk_ver_todos.value or not dd_soportista.value:
+                # Ver todos los clientes
+                clientes_actuales = db.obtener_clientes()
+            else:
+                # Solo clientes del soportista
+                clientes_actuales = db.obtener_clientes(soportista_id=int(dd_soportista.value))
+            
+            dd_cliente.options = [ft.dropdown.Option(key=str(c['id']), text=c['nombre']) for c in clientes_actuales]
+            
+            # Si el cliente actual no está en la lista, limpiar selección
+            if dd_cliente.value and not any(str(c['id']) == dd_cliente.value for c in clientes_actuales):
+                dd_cliente.value = ""
+            
+            if not clientes_actuales:
+                dd_cliente.options = [ft.dropdown.Option(key="", text="-- No hay clientes asignados --")]
+            
+            page.update()
+        
+        dd_soportista.on_change = actualizar_clientes
+        chk_ver_todos.on_change = actualizar_clientes
         
         txt_persona = ft.TextField(label="Persona Atendida (opcional)", value=visita.get('persona_atendida', ''), border_radius=10)
         
@@ -370,6 +415,9 @@ def main(page: ft.Page):
             visible=visita.get('tiene_pendiente', False),
             border_radius=10
         )
+        
+        # Checkbox para enviar correo
+        chk_enviar_correo = ft.Checkbox(label="📧 Enviar boleta por correo al cliente", value=False)
         
         def toggle_pendiente(e):
             txt_pendiente.visible = chk_pendiente.value
@@ -410,39 +458,40 @@ def main(page: ft.Page):
             
             mostrar_mensaje("Visita guardada")
             
-            # Preguntar si enviar por correo
-            visita_guardada = db.obtener_visita(visita_id)
-            if visita_guardada.get('cliente_correo'):
-                confirmar_accion(
-                    "Enviar Boleta",
-                    f"¿Enviar boleta por correo a {visita_guardada['cliente_correo']}?",
-                    lambda: enviar_boleta(visita_guardada)
-                )
-            else:
-                ir_inicio()
-        
-        def enviar_boleta(visita):
-            html = correo.generar_html_boleta(visita)
-            ok, msg = correo.enviar_correo(
-                visita['cliente_correo'],
-                f"Boleta de Visita - {visita['fecha']}",
-                html
-            )
-            mostrar_mensaje(msg, not ok)
+            # Enviar correo solo si está marcado el checkbox
+            if chk_enviar_correo.value:
+                visita_guardada = db.obtener_visita(visita_id)
+                if visita_guardada.get('cliente_correo'):
+                    html = correo.generar_html_boleta(visita_guardada)
+                    ok, msg = correo.enviar_correo(
+                        visita_guardada['cliente_correo'],
+                        f"Boleta de Visita - {visita_guardada['fecha']}",
+                        html
+                    )
+                    mostrar_mensaje(msg, not ok)
+                else:
+                    mostrar_mensaje("El cliente no tiene correo configurado", True)
+            
             ir_inicio()
+        
+        # Cargar clientes iniciales si hay soportista seleccionado
+        if visita.get('soportista_id'):
+            actualizar_clientes()
         
         page.add(
             crear_appbar("Editar Visita" if id else "Nueva Visita"),
             ft.Container(
                 content=ft.Column([
-                    dd_cliente,
                     dd_soportista,
+                    ft.Row([dd_cliente, chk_ver_todos], spacing=5, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     txt_persona,
                     ft.Row([txt_fecha, txt_hora], spacing=10),
                     txt_duracion,
                     txt_trabajo,
                     chk_pendiente,
                     txt_pendiente,
+                    ft.Divider(),
+                    chk_enviar_correo,
                     ft.ElevatedButton("Guardar Visita", icon=ft.Icons.SAVE, bgcolor="#4caf50", color="white", width=float("inf"), on_click=guardar)
                 ], spacing=12, scroll=ft.ScrollMode.AUTO),
                 padding=20,

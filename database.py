@@ -26,10 +26,18 @@ def init_db():
             nombre TEXT NOT NULL,
             correo TEXT,
             telefono TEXT,
+            soportista_id INTEGER,
             activo INTEGER DEFAULT 1,
-            fecha_creacion TEXT DEFAULT CURRENT_TIMESTAMP
+            fecha_creacion TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (soportista_id) REFERENCES soportistas(id)
         )
     ''')
+    
+    # Agregar columna soportista_id si no existe (para BD existentes)
+    try:
+        cursor.execute('ALTER TABLE clientes ADD COLUMN soportista_id INTEGER')
+    except:
+        pass  # La columna ya existe
     
     # Tabla de Soportistas
     cursor.execute('''
@@ -75,14 +83,28 @@ def init_db():
 
 # ============== CLIENTES ==============
 
-def obtener_clientes(solo_activos=True):
-    """Obtiene lista de clientes"""
+def obtener_clientes(solo_activos=True, soportista_id=None):
+    """Obtiene lista de clientes, opcionalmente filtrados por soportista"""
     conn = get_connection()
     cursor = conn.cursor()
+    
+    sql = '''
+        SELECT c.*, s.nombre as soportista_nombre 
+        FROM clientes c
+        LEFT JOIN soportistas s ON c.soportista_id = s.id
+        WHERE 1=1
+    '''
+    params = []
+    
     if solo_activos:
-        cursor.execute('SELECT * FROM clientes WHERE activo = 1 ORDER BY nombre')
-    else:
-        cursor.execute('SELECT * FROM clientes ORDER BY nombre')
+        sql += ' AND c.activo = 1'
+    if soportista_id:
+        sql += ' AND c.soportista_id = ?'
+        params.append(soportista_id)
+    
+    sql += ' ORDER BY c.nombre'
+    
+    cursor.execute(sql, params)
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
@@ -96,18 +118,18 @@ def obtener_cliente(id):
     conn.close()
     return dict(row) if row else None
 
-def guardar_cliente(nombre, correo, telefono, id=None):
+def guardar_cliente(nombre, correo, telefono, soportista_id=None, id=None):
     """Guarda o actualiza un cliente"""
     conn = get_connection()
     cursor = conn.cursor()
     if id:
         cursor.execute('''
-            UPDATE clientes SET nombre=?, correo=?, telefono=? WHERE id=?
-        ''', (nombre, correo, telefono, id))
+            UPDATE clientes SET nombre=?, correo=?, telefono=?, soportista_id=? WHERE id=?
+        ''', (nombre, correo, telefono, soportista_id, id))
     else:
         cursor.execute('''
-            INSERT INTO clientes (nombre, correo, telefono) VALUES (?, ?, ?)
-        ''', (nombre, correo, telefono))
+            INSERT INTO clientes (nombre, correo, telefono, soportista_id) VALUES (?, ?, ?, ?)
+        ''', (nombre, correo, telefono, soportista_id))
         id = cursor.lastrowid
     conn.commit()
     conn.close()
