@@ -3,7 +3,7 @@ App Soporte - Gestión de Visitas Técnicas
 """
 import flet as ft
 import os
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import database as db
 import correo
 
@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.1.3"
+    VERSION = "1.2.0"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -418,21 +418,37 @@ def main(page: ft.Page):
         txt_persona = ft.TextField(label="Persona Atendida (opcional)", value=visita.get('persona_atendida', ''), border_radius=10)
         
         # Fecha y hora
-        hoy = date.today().strftime('%Y-%m-%d')
+        hoy = date.today()
         ahora = datetime.now().strftime('%H:%M')
         
-        txt_fecha = ft.TextField(label="Fecha *", value=visita.get('fecha', hoy), border_radius=10, hint_text="YYYY-MM-DD")
-        txt_hora = ft.TextField(label="Hora Inicio *", value=visita.get('hora_inicio', ahora), border_radius=10, hint_text="HH:MM")
-        txt_duracion = ft.TextField(label="Duración (minutos) *", value=str(visita.get('duracion_minutos', '30')), border_radius=10, keyboard_type=ft.KeyboardType.NUMBER)
+        # Fecha con flechas para cambiar días
+        fecha_actual = {"valor": visita.get('fecha', hoy.strftime('%Y-%m-%d'))}
+        txt_fecha = ft.TextField(label="Fecha", value=fecha_actual["valor"], border_radius=10, width=120, text_size=13)
+        
+        def cambiar_fecha(dias):
+            try:
+                fecha_obj = datetime.strptime(txt_fecha.value, '%Y-%m-%d')
+                fecha_obj = fecha_obj + timedelta(days=dias)
+                txt_fecha.value = fecha_obj.strftime('%Y-%m-%d')
+                page.update()
+            except:
+                pass
+        
+        btn_fecha_menos = ft.IconButton(icon=ft.Icons.ARROW_LEFT, icon_size=20, on_click=lambda e: cambiar_fecha(-1), tooltip="Día anterior")
+        btn_fecha_mas = ft.IconButton(icon=ft.Icons.ARROW_RIGHT, icon_size=20, on_click=lambda e: cambiar_fecha(1), tooltip="Día siguiente")
+        btn_fecha_hoy = ft.TextButton("Hoy", on_click=lambda e: (setattr(txt_fecha, 'value', hoy.strftime('%Y-%m-%d')), page.update()))
+        
+        txt_hora = ft.TextField(label="Hora", value=visita.get('hora_inicio', ahora), border_radius=10, width=80, text_size=13)
+        txt_duracion = ft.TextField(label="Min", value=str(visita.get('duracion_minutos', '30')), border_radius=10, width=60, text_size=13, keyboard_type=ft.KeyboardType.NUMBER)
         
         txt_trabajo = ft.TextField(
             label="Trabajo Realizado *",
             value=visita.get('trabajo_realizado', ''),
             multiline=True,
-            min_lines=6,
-            max_lines=10,
+            min_lines=4,
+            max_lines=6,
             border_radius=10,
-            text_size=14
+            text_size=13
         )
         
         chk_pendiente = ft.Checkbox(label="¿Quedó pendiente?", value=visita.get('tiene_pendiente', False))
@@ -512,8 +528,8 @@ def main(page: ft.Page):
                     dd_soportista,
                     ft.Row([dd_cliente, chk_ver_todos], spacing=5, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     txt_persona,
-                    ft.Row([txt_fecha, txt_hora], spacing=10),
-                    txt_duracion,
+                    ft.Row([btn_fecha_menos, txt_fecha, btn_fecha_mas, btn_fecha_hoy, txt_hora, txt_duracion], 
+                           spacing=2, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     txt_trabajo,
                     chk_pendiente,
                     txt_pendiente,
@@ -697,8 +713,31 @@ def main(page: ft.Page):
         hoy = date.today()
         primer_dia_mes = hoy.replace(day=1).strftime('%Y-%m-%d')
         
-        txt_desde = ft.TextField(label="Desde", value=primer_dia_mes, border_radius=10, width=140, text_size=13)
-        txt_hasta = ft.TextField(label="Hasta", value=hoy.strftime('%Y-%m-%d'), border_radius=10, width=140, text_size=13)
+        txt_desde = ft.TextField(label="Desde", value=primer_dia_mes, border_radius=10, width=110, text_size=12)
+        txt_hasta = ft.TextField(label="Hasta", value=hoy.strftime('%Y-%m-%d'), border_radius=10, width=110, text_size=12)
+        
+        def abrir_calendario_desde(e):
+            date_picker_desde.open = True
+            page.update()
+        
+        def abrir_calendario_hasta(e):
+            date_picker_hasta.open = True
+            page.update()
+        
+        def fecha_desde_seleccionada(e):
+            txt_desde.value = e.control.value.strftime('%Y-%m-%d')
+            page.update()
+        
+        def fecha_hasta_seleccionada(e):
+            txt_hasta.value = e.control.value.strftime('%Y-%m-%d')
+            page.update()
+        
+        date_picker_desde = ft.DatePicker(on_change=fecha_desde_seleccionada)
+        date_picker_hasta = ft.DatePicker(on_change=fecha_hasta_seleccionada)
+        page.overlay.extend([date_picker_desde, date_picker_hasta])
+        
+        btn_cal_desde = ft.IconButton(icon=ft.Icons.CALENDAR_MONTH, icon_size=20, on_click=abrir_calendario_desde, tooltip="Seleccionar fecha")
+        btn_cal_hasta = ft.IconButton(icon=ft.Icons.CALENDAR_MONTH, icon_size=20, on_click=abrir_calendario_hasta, tooltip="Seleccionar fecha")
         
         lista = ft.ListView(spacing=10, expand=True)
         lbl_resumen = ft.Text("", size=14, weight=ft.FontWeight.BOLD)
@@ -852,7 +891,7 @@ def main(page: ft.Page):
             ft.Container(
                 content=ft.Column([
                     contenedor_cliente,
-                    ft.Row([txt_desde, txt_hasta], spacing=10),
+                    ft.Row([txt_desde, btn_cal_desde, txt_hasta, btn_cal_hasta], spacing=2, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     ft.ElevatedButton("Buscar", icon=ft.Icons.SEARCH, bgcolor="#2196f3", color="white", width=float("inf"), on_click=buscar),
                     ft.Row([
                         ft.ElevatedButton("📄 Exportar PDF", bgcolor="#ff9800", color="white", expand=True, on_click=exportar_pdf, tooltip="Descargar reporte como PDF"),
