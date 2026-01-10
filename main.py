@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.6.3"
+    VERSION = "1.6.4"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -1008,10 +1008,8 @@ def main(page: ft.Page):
             lbl_resumen.value = ""
             page.update()
         
-        async def descargar_reporte(e):
-            """Descarga el reporte como archivo .txt"""
-            import urllib.parse
-            
+        def ver_reporte(e):
+            """Muestra el reporte en un diálogo para copiar"""
             if not visitas_resultado:
                 mostrar_mensaje("Primero busque boletas", True)
                 return
@@ -1034,14 +1032,30 @@ def main(page: ft.Page):
             
             texto = "\n".join(lineas)
             
-            # Codificar para URL
-            texto_encoded = urllib.parse.quote(texto)
+            def cerrar(ev):
+                dlg.open = False
+                page.update()
             
-            # Descargar como archivo .txt
-            data_url = f"data:text/plain;charset=utf-8,{texto_encoded}"
-            await page.launch_url_async(data_url)
-            
-            mostrar_mensaje("📥 Reporte descargado")
+            dlg = ft.AlertDialog(
+                modal=True,
+                title=ft.Text("📋 Reporte"),
+                content=ft.Column([
+                    ft.Text("Mantenga presionado → Seleccionar todo → Copiar", size=11, color="#666", italic=True),
+                    ft.TextField(
+                        value=texto,
+                        multiline=True,
+                        min_lines=15,
+                        max_lines=20,
+                        read_only=False,
+                        text_size=11,
+                        border_color="#ccc"
+                    )
+                ], tight=True, width=360, spacing=8),
+                actions=[ft.TextButton("Cerrar", on_click=cerrar)]
+            )
+            page.overlay.append(dlg)
+            dlg.open = True
+            page.update()
         
         def enviar_reporte(e):
             try:
@@ -1086,7 +1100,7 @@ def main(page: ft.Page):
                     ft.Row([txt_desde, btn_cal_desde, txt_hasta, btn_cal_hasta], spacing=2, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     ft.ElevatedButton("Buscar", icon=ft.Icons.SEARCH, bgcolor="#2196f3", color="white", width=float("inf"), on_click=buscar),
                     ft.Row([
-                        ft.ElevatedButton("📥 Descargar Reporte", bgcolor="#ff9800", color="white", expand=True, on_click=descargar_reporte),
+                        ft.ElevatedButton("📋 Ver Reporte", bgcolor="#ff9800", color="white", expand=True, on_click=ver_reporte),
                         ft.ElevatedButton("📧 Enviar Correo", bgcolor="#4caf50", color="white", expand=True, on_click=enviar_reporte),
                     ], spacing=10),
                     lbl_resumen,
