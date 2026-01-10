@@ -349,7 +349,8 @@ def main(page: ft.Page):
             label="Cliente *",
             options=[],
             value=str(visita.get('cliente_id', '')) if visita.get('cliente_id') else "",
-            border_radius=10
+            border_radius=10,
+            expand=True
         )
         
         # Checkbox para ver todos los clientes
@@ -402,8 +403,8 @@ def main(page: ft.Page):
             label="Trabajo Realizado *",
             value=visita.get('trabajo_realizado', ''),
             multiline=True,
-            min_lines=3,
-            max_lines=5,
+            min_lines=5,
+            max_lines=8,
             border_radius=10
         )
         
