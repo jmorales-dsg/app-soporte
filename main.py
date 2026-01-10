@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.6.0"
+    VERSION = "1.6.1"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -1009,7 +1009,7 @@ def main(page: ft.Page):
             page.update()
         
         def copiar_reporte(e):
-            """Copia el reporte al portapapeles usando JavaScript"""
+            """Muestra el reporte en un campo para copiar manualmente"""
             if not visitas_resultado:
                 mostrar_mensaje("Primero busque boletas", True)
                 return
@@ -1031,16 +1031,31 @@ def main(page: ft.Page):
                 lineas.append(f"Trabajo: {v.get('trabajo_realizado', '')}")
             
             texto = "\n".join(lineas)
-            # Escapar para JavaScript
-            texto_js = texto.replace("\\", "\\\\").replace("`", "\\`").replace("$", "\\$").replace("\n", "\\n")
             
-            try:
-                # Copiar usando JavaScript - forma síncrona
-                page.run_javascript(f"navigator.clipboard.writeText(`{texto_js}`)")
-                mostrar_mensaje("✅ Reporte copiado al portapapeles")
-            except Exception as ex:
-                print(f"Error copiando: {ex}")
-                mostrar_mensaje(f"Error al copiar: {str(ex)}", True)
+            def cerrar(ev):
+                dlg.open = False
+                page.update()
+            
+            # Mostrar en diálogo con campo de texto seleccionable
+            dlg = ft.AlertDialog(
+                modal=True,
+                title=ft.Text("📋 Reporte - Seleccione y Copie"),
+                content=ft.Column([
+                    ft.Text("Toque el texto, Ctrl+A (seleccionar todo), Ctrl+C (copiar)", size=11, color="#666"),
+                    ft.TextField(
+                        value=texto,
+                        multiline=True,
+                        min_lines=12,
+                        max_lines=18,
+                        read_only=False,
+                        text_size=11
+                    )
+                ], tight=True, width=380, spacing=8),
+                actions=[ft.TextButton("Cerrar", on_click=cerrar)]
+            )
+            page.overlay.append(dlg)
+            dlg.open = True
+            page.update()
         
         def enviar_reporte(e):
             try:
@@ -1085,7 +1100,7 @@ def main(page: ft.Page):
                     ft.Row([txt_desde, btn_cal_desde, txt_hasta, btn_cal_hasta], spacing=2, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     ft.ElevatedButton("Buscar", icon=ft.Icons.SEARCH, bgcolor="#2196f3", color="white", width=float("inf"), on_click=buscar),
                     ft.Row([
-                        ft.ElevatedButton("📋 Copiar Reporte", bgcolor="#ff9800", color="white", expand=True, on_click=copiar_reporte),
+                        ft.ElevatedButton("📋 Ver/Copiar Reporte", bgcolor="#ff9800", color="white", expand=True, on_click=copiar_reporte),
                         ft.ElevatedButton("📧 Enviar Correo", bgcolor="#4caf50", color="white", expand=True, on_click=enviar_reporte),
                     ], spacing=10),
                     lbl_resumen,
