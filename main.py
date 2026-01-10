@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.4.2"
+    VERSION = "1.4.3"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -1022,69 +1022,111 @@ def main(page: ft.Page):
             )
             mostrar_mensaje(msg, not ok)
         
-        async def exportar_pdf(e):
-            """Usa Web Share API nativa de iOS/Android para compartir"""
+        def exportar_pdf(e):
+            """Abre pantalla imprimible - el usuario usa Compartir > Imprimir del navegador"""
             if not visitas_resultado:
                 mostrar_mensaje("Primero busque boletas", True)
                 return
             
-            # Generar texto del reporte
             tiempo_total = db.calcular_tiempo_total(visitas_resultado)
             
-            lineas = [
-                "══════════════════════════════",
-                "REPORTE DE VISITAS - PcGraf",
-                "══════════════════════════════",
-                "",
-                f"Cliente: {cliente_seleccionado['nombre']}",
-                f"Período: {txt_desde.value} al {txt_hasta.value}",
-                f"Total: {len(visitas_resultado)} visitas | {db.formatear_duracion(tiempo_total)}",
-                "",
-            ]
+            # Navegar a pantalla de reporte imprimible
+            page.clean()
             
+            # Crear contenido del reporte
+            items = []
+            
+            # Encabezado
+            items.append(ft.Container(
+                content=ft.Column([
+                    ft.Text("📋 REPORTE DE VISITAS", size=24, weight=ft.FontWeight.BOLD, color="white"),
+                    ft.Text(f"Cliente: {cliente_seleccionado['nombre']}", size=16, color="white"),
+                    ft.Text(f"Período: {txt_desde.value} al {txt_hasta.value}", size=14, color="#ffffffcc"),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=5),
+                bgcolor="#2196f3",
+                padding=20,
+                width=float("inf"),
+                border_radius=10
+            ))
+            
+            # Resumen
+            items.append(ft.Container(
+                content=ft.Row([
+                    ft.Column([
+                        ft.Text(str(len(visitas_resultado)), size=32, weight=ft.FontWeight.BOLD, color="#2196f3"),
+                        ft.Text("Visitas", size=12, color="#666"),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                    ft.Column([
+                        ft.Text(db.formatear_duracion(tiempo_total), size=32, weight=ft.FontWeight.BOLD, color="#2196f3"),
+                        ft.Text("Tiempo Total", size=12, color="#666"),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                ], alignment=ft.MainAxisAlignment.SPACE_AROUND),
+                bgcolor="#e3f2fd",
+                padding=15,
+                border_radius=10
+            ))
+            
+            # Cada visita
             for v in visitas_resultado:
-                lineas.append(f"─────────────────")
-                lineas.append(f"Boleta #{v.get('id', '?')} | {v.get('fecha', '')} {v.get('hora_inicio', '')}")
-                lineas.append(f"Duración: {db.formatear_duracion(v.get('duracion_minutos', 0))} | Técnico: {v.get('soportista_nombre', '')}")
-                if v.get('persona_atendida'):
-                    lineas.append(f"Atendido: {v.get('persona_atendida')}")
-                lineas.append(f"Trabajo: {v.get('trabajo_realizado', '')}")
+                pendiente_txt = ""
                 if v.get('tiene_pendiente') and not v.get('pendiente_resuelto'):
-                    lineas.append(f"⚠️ PENDIENTE: {v.get('descripcion_pendiente', '')}")
+                    pendiente_txt = f"\n⚠️ PENDIENTE: {v.get('descripcion_pendiente', '')}"
+                
+                persona_txt = f"\n👤 Atendido: {v.get('persona_atendida')}" if v.get('persona_atendida') else ""
+                
+                items.append(ft.Container(
+                    content=ft.Column([
+                        ft.Row([
+                            ft.Text(f"Boleta #{v.get('id', '?')}", weight=ft.FontWeight.BOLD, color="#2196f3"),
+                            ft.Text(f"{v.get('fecha', '')} - {v.get('hora_inicio', '')}", color="#666"),
+                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                        ft.Text(f"⏱️ {db.formatear_duracion(v.get('duracion_minutos', 0))} | 👷 {v.get('soportista_nombre', '')}", size=12, color="#666"),
+                        ft.Text(f"{persona_txt}" if persona_txt else "", size=12),
+                        ft.Container(
+                            content=ft.Text(v.get('trabajo_realizado', ''), size=13),
+                            bgcolor="#f5f5f5",
+                            padding=10,
+                            border_radius=5,
+                            width=float("inf")
+                        ),
+                        ft.Text(pendiente_txt, color="#ff9800", size=12) if pendiente_txt else ft.Container(),
+                    ], spacing=5),
+                    bgcolor="white",
+                    padding=15,
+                    border_radius=10,
+                    border=ft.border.all(1, "#e0e0e0")
+                ))
             
-            lineas.append("")
-            lineas.append(f"Generado: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+            # Pie
+            items.append(ft.Text(f"Generado: {datetime.now().strftime('%Y-%m-%d %H:%M')}", size=11, color="#999", text_align=ft.TextAlign.CENTER))
             
-            texto = "\n".join(lineas)
-            titulo = f"Reporte {cliente_seleccionado['nombre']} - {txt_desde.value}"
+            # Botón volver
+            def volver(ev):
+                ir_consulta()
             
-            # Usar Web Share API (funciona en iOS y Android)
-            js_code = f'''
-            (async () => {{
-                if (navigator.share) {{
-                    try {{
-                        await navigator.share({{
-                            title: "{titulo}",
-                            text: `{texto.replace('`', "'").replace(chr(10), '\\n')}`
-                        }});
-                        return 'ok';
-                    }} catch(e) {{
-                        return 'cancelled';
-                    }}
-                }} else {{
-                    return 'not_supported';
-                }}
-            }})()
-            '''
-            
-            try:
-                result = await page.run_javascript_async(js_code)
-                if result == 'ok':
-                    mostrar_mensaje("✅ Reporte compartido")
-                elif result == 'not_supported':
-                    mostrar_mensaje("Este navegador no soporta compartir. Use 'Enviar Correo'.", True)
-            except Exception as ex:
-                mostrar_mensaje(f"Error: {str(ex)}", True)
+            page.add(
+                ft.Container(
+                    content=ft.Column([
+                        ft.Container(
+                            content=ft.Row([
+                                ft.ElevatedButton("← Volver", on_click=volver),
+                                ft.Text("📱 Use Compartir → Imprimir para guardar PDF", size=11, color="#666", expand=True, text_align=ft.TextAlign.CENTER),
+                            ]),
+                            padding=10,
+                            bgcolor="#fff3cd",
+                            border_radius=5
+                        ),
+                        ft.ListView(
+                            controls=items,
+                            spacing=10,
+                            padding=10,
+                            expand=True
+                        )
+                    ]),
+                    expand=True
+                )
+            )
+            page.update()
         
         page.add(
             crear_appbar("Consultar Boletas"),
@@ -1094,7 +1136,7 @@ def main(page: ft.Page):
                     ft.Row([txt_desde, btn_cal_desde, txt_hasta, btn_cal_hasta], spacing=2, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     ft.ElevatedButton("Buscar", icon=ft.Icons.SEARCH, bgcolor="#2196f3", color="white", width=float("inf"), on_click=buscar),
                     ft.Row([
-                        ft.ElevatedButton("📤 Compartir", bgcolor="#ff9800", color="white", expand=True, on_click=exportar_pdf, tooltip="Compartir reporte"),
+                        ft.ElevatedButton("📄 Ver Reporte", bgcolor="#ff9800", color="white", expand=True, on_click=exportar_pdf, tooltip="Ver reporte para imprimir/PDF"),
                         ft.ElevatedButton("📧 Enviar Correo", bgcolor="#4caf50", color="white", expand=True, on_click=enviar_reporte, tooltip="Enviar reporte por correo"),
                     ], spacing=10),
                     lbl_resumen,
