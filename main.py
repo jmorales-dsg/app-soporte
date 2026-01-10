@@ -177,14 +177,13 @@ def main(page: ft.Page):
         page.add(
             crear_appbar("Clientes"),
             lista,
-            ft.Container(
-                content=ft.FloatingActionButton(
+            ft.Row(
+                [ft.FloatingActionButton(
                     icon=ft.Icons.ADD,
                     bgcolor="#4caf50",
                     on_click=lambda e: ir_form_cliente()
-                ),
-                alignment=ft.alignment.bottom_right,
-                padding=20
+                )],
+                alignment=ft.MainAxisAlignment.END,
             )
         )
         cargar_clientes()
@@ -272,10 +271,9 @@ def main(page: ft.Page):
         page.add(
             crear_appbar("Soportistas"),
             lista,
-            ft.Container(
-                content=ft.FloatingActionButton(icon=ft.Icons.ADD, bgcolor="#4caf50", on_click=lambda e: ir_form_soportista()),
-                alignment=ft.alignment.bottom_right,
-                padding=20
+            ft.Row(
+                [ft.FloatingActionButton(icon=ft.Icons.ADD, bgcolor="#4caf50", on_click=lambda e: ir_form_soportista())],
+                alignment=ft.MainAxisAlignment.END,
             )
         )
         cargar()
@@ -492,8 +490,8 @@ def main(page: ft.Page):
                         content=ft.Column([
                             ft.Icon(ft.Icons.CHECK_CIRCLE, size=60, color="#4caf50"),
                             ft.Text("¡Sin pendientes!", size=18, weight=ft.FontWeight.BOLD),
-                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                        alignment=ft.alignment.center,
+                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, 
+                           alignment=ft.MainAxisAlignment.CENTER),
                         expand=True
                     )
                 )
