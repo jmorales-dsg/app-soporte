@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.0.5"
+    VERSION = "1.0.6"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -703,56 +703,48 @@ def main(page: ft.Page):
             # Lista de visitas
             for v in visitas_resultado:
                 # Obtener datos con valores por defecto si no existen
-                boleta_id = v.get('id', '?')
+                boleta_id = v.get('id') or '?'
                 fecha = v.get('fecha') or 'Sin fecha'
                 hora = v.get('hora_inicio') or '??:??'
                 duracion = v.get('duracion_minutos') or 0
                 soportista = v.get('soportista_nombre') or 'SIN TÉCNICO'
-                trabajo = v.get('trabajo_realizado') or ''
+                trabajo = v.get('trabajo_realizado') or '(sin detalle)'
                 persona_atendida = (v.get('persona_atendida') or '').strip()
                 tiene_pendiente = v.get('tiene_pendiente') and not v.get('pendiente_resuelto')
                 
-                # Construir controles de la tarjeta - cada línea separada
-                controles_visita = [
-                    # Línea 1: Boleta y Fecha
-                    ft.Text(f"📋 Boleta #{boleta_id}  -  {fecha}", size=15, weight=ft.FontWeight.BOLD, color="#2196f3"),
-                    # Línea 2: Hora y Tiempo  
-                    ft.Text(f"🕐 {hora}  ⏱️ {db.formatear_duracion(duracion)}  👷 {soportista}", size=13, color="#333"),
-                    # Línea 3: Trabajo realizado
-                    ft.Container(
-                        content=ft.Text(trabajo, size=13),
-                        bgcolor="#f5f5f5",
-                        border_radius=5,
-                        padding=10
-                    ),
-                ]
-                
-                # Agregar persona atendida si existe
+                # Texto de info completo
+                info_linea = f"🕐 {hora}  ⏱️ {db.formatear_duracion(duracion)}  👷 {soportista}"
                 if persona_atendida:
-                    controles_visita.insert(2, ft.Text(f"👤 Atendido: {persona_atendida}", size=12, color="#666"))
-                
-                # Agregar pendiente si existe
-                if tiene_pendiente:
-                    controles_visita.append(
-                        ft.Container(
-                            content=ft.Text(f"⚠️ PENDIENTE: {v.get('descripcion_pendiente', '')}", size=12, color="#ff9800"),
-                            bgcolor="#fff3cd",
-                            border_radius=5,
-                            padding=8
-                        )
-                    )
+                    info_linea += f"  👤 {persona_atendida}"
                 
                 lista.controls.append(
                     ft.Container(
-                        content=ft.Column(controles_visita, spacing=5),
+                        content=ft.Column([
+                            ft.Text(f"📋 Boleta #{boleta_id}  -  {fecha}", size=15, weight=ft.FontWeight.BOLD, color="#2196f3"),
+                            ft.Text(info_linea, size=12, color="#555"),
+                            ft.Container(
+                                content=ft.Text(trabajo, size=13),
+                                bgcolor="#f5f5f5",
+                                border_radius=5,
+                                padding=10
+                            ),
+                            ft.Container(
+                                content=ft.Text(f"⚠️ PENDIENTE: {v.get('descripcion_pendiente', '')}", size=12, color="#ff9800"),
+                                bgcolor="#fff3cd",
+                                border_radius=5,
+                                padding=8,
+                                visible=tiene_pendiente
+                            ),
+                        ], spacing=5),
                         bgcolor="white",
                         border_radius=10,
                         padding=15,
                         margin=ft.margin.only(bottom=10),
                         border=ft.border.all(1, "#e0e0e0"),
-                        on_click=lambda e, vis=v: mostrar_detalle_visita(vis)
                     )
                 )
+            
+                
             
             if not visitas_resultado:
                 lista.controls.append(
