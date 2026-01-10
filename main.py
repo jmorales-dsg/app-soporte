@@ -876,11 +876,20 @@ def main(page: ft.Page):
                 dlg.open = False
                 page.update()
             
+            btn_copiar_ref = ft.Ref[ft.ElevatedButton]()
+            
             def copiar_reporte(ev):
-                page.set_clipboard(texto_reporte)
-                page.snack_bar = ft.SnackBar(ft.Text("✅ Copiado al portapapeles"), bgcolor="#4caf50")
-                page.snack_bar.open = True
-                page.update()
+                try:
+                    page.set_clipboard(texto_reporte)
+                    # Cambiar el botón para confirmar visualmente
+                    btn_copiar_ref.current.text = "✅ ¡Copiado!"
+                    btn_copiar_ref.current.bgcolor = "#4caf50"
+                    page.update()
+                except Exception as e:
+                    btn_copiar_ref.current.text = "❌ Error"
+                    btn_copiar_ref.current.bgcolor = "#f44336"
+                    page.update()
+                    print(f"Error clipboard: {e}")
             
             txt_reporte = ft.TextField(value=texto_reporte, multiline=True, read_only=True, min_lines=10, max_lines=12)
             
@@ -891,7 +900,7 @@ def main(page: ft.Page):
                     ft.Text("Toque 'Copiar' y pegue en Word o WhatsApp:", size=12),
                     txt_reporte,
                     ft.Row([
-                        ft.ElevatedButton("📋 Copiar Todo", bgcolor="#2196f3", color="white", on_click=copiar_reporte),
+                        ft.ElevatedButton("📋 Copiar Todo", bgcolor="#2196f3", color="white", on_click=copiar_reporte, ref=btn_copiar_ref),
                     ], alignment=ft.MainAxisAlignment.CENTER)
                 ], tight=True, width=350, spacing=10),
                 actions=[ft.TextButton("Cerrar", on_click=cerrar)]
