@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.5.3"
+    VERSION = "1.5.4"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -53,22 +53,18 @@ def main(page: ft.Page):
         )
     
     def mostrar_mensaje(texto, es_error=False):
-        """Muestra un mensaje temporal usando diálogo"""
-        print(f"MENSAJE: {texto}")  # Debug
-        
-        def cerrar(ev):
-            dlg.open = False
+        """Muestra un mensaje temporal"""
+        try:
+            print(f"MENSAJE: {texto}")  # Debug en logs de Railway
+            page.snack_bar = ft.SnackBar(
+                content=ft.Text(str(texto), color="white"),
+                bgcolor="#f44336" if es_error else "#4caf50",
+                duration=4000
+            )
+            page.snack_bar.open = True
             page.update()
-        
-        dlg = ft.AlertDialog(
-            modal=False,
-            title=ft.Text("❌ Error" if es_error else "✅ Info", color="#f44336" if es_error else "#4caf50"),
-            content=ft.Text(texto),
-            actions=[ft.TextButton("OK", on_click=cerrar)]
-        )
-        page.overlay.append(dlg)
-        dlg.open = True
-        page.update()
+        except Exception as ex:
+            print(f"Error mostrando mensaje: {ex}")
     
     def confirmar_accion(titulo, mensaje, on_confirmar):
         """Muestra diálogo de confirmación"""
@@ -1014,6 +1010,7 @@ def main(page: ft.Page):
         
         def enviar_reporte(e):
             try:
+                print("DEBUG: Iniciando enviar_reporte()")
                 if not visitas_resultado:
                     mostrar_mensaje("Primero busque boletas", True)
                     return
@@ -1022,7 +1019,9 @@ def main(page: ft.Page):
                     mostrar_mensaje("Seleccione un cliente", True)
                     return
                 
+                print(f"DEBUG: Cliente seleccionado = {cliente_seleccionado}")
                 cliente = db.obtener_cliente(int(cliente_seleccionado["id"]))
+                print(f"DEBUG: Cliente obtenido = {cliente}")
                 if not cliente:
                     mostrar_mensaje("Cliente no encontrado", True)
                     return
@@ -1292,16 +1291,20 @@ def main(page: ft.Page):
         
         def probar(e):
             try:
+                print("DEBUG: Iniciando probar()")
                 guardar(e)
+                print("DEBUG: Guardado OK")
                 lbl_status.value = "📤 Enviando correo de prueba..."
                 lbl_status.color = "#2196f3"
                 page.update()
+                print(f"DEBUG: Enviando a {txt_user.value.strip()}")
                 
                 ok, msg = correo.enviar_correo(
                     txt_user.value.strip(),
                     "Prueba App Soporte",
                     "<h1>✅ Configuración correcta</h1><p>El correo funciona correctamente.</p>"
                 )
+                print(f"DEBUG: Resultado = {ok}, {msg}")
                 
                 if ok:
                     lbl_status.value = f"✅ {msg}"
