@@ -444,6 +444,118 @@ def obtener_clientes_sin_boletas(soportista_id=None, fecha_desde=None, fecha_has
     
     return execute_query(sql, params if params else None)
 
+# ============== TAREAS/PENDIENTES INDEPENDIENTES ==============
+
+def crear_tabla_tareas():
+    """Crea la tabla de tareas si no existe"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    if USE_POSTGRES:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tareas (
+                id SERIAL PRIMARY KEY,
+                soportista_id INTEGER NOT NULL REFERENCES soportistas(id),
+                cliente_id INTEGER REFERENCES clientes(id),
+                descripcion TEXT NOT NULL,
+                fecha_limite TEXT,
+                hora_limite TEXT,
+                completada INTEGER DEFAULT 0,
+                fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                fecha_completada TIMESTAMP
+            )
+        ''')
+    else:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tareas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                soportista_id INTEGER NOT NULL,
+                cliente_id INTEGER,
+                descripcion TEXT NOT NULL,
+                fecha_limite TEXT,
+                hora_limite TEXT,
+                completada INTEGER DEFAULT 0,
+                fecha_creacion TEXT DEFAULT CURRENT_TIMESTAMP,
+                fecha_completada TEXT,
+                FOREIGN KEY (soportista_id) REFERENCES soportistas(id),
+                FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+            )
+        ''')
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+# Crear tabla al importar
+try:
+    crear_tabla_tareas()
+except:
+    pass
+
+def obtener_tareas(soportista_id=None, solo_pendientes=True):
+    """Obtiene lista de tareas"""
+    sql = '''
+        SELECT t.*, s.nombre as soportista_nombre, c.nombre as cliente_nombre
+        FROM tareas t
+        JOIN soportistas s ON t.soportista_id = s.id
+        LEFT JOIN clientes c ON t.cliente_id = c.id
+        WHERE 1=1
+    '''
+    params = []
+    
+    if soportista_id:
+        sql += ' AND t.soportista_id = ?'
+        params.append(soportista_id)
+    
+    if solo_pendientes:
+        sql += ' AND t.completada = 0'
+    
+    sql += ' ORDER BY t.fecha_limite, t.hora_limite, t.id'
+    
+    return execute_query(sql, params if params else None)
+
+def guardar_tarea(soportista_id, descripcion, cliente_id=None, fecha_limite=None, hora_limite=None, id=None):
+    """Guarda o actualiza una tarea"""
+    if id:
+        execute_query('''
+            UPDATE tareas SET descripcion=?, cliente_id=?, fecha_limite=?, hora_limite=? WHERE id=?
+        ''', (descripcion, cliente_id, fecha_limite, hora_limite, id), fetch=False)
+        return id
+    else:
+        if USE_POSTGRES:
+            return execute_query('''
+                INSERT INTO tareas (soportista_id, descripcion, cliente_id, fecha_limite, hora_limite) 
+                VALUES (?, ?, ?, ?, ?) RETURNING id
+            ''', (soportista_id, descripcion, cliente_id, fecha_limite, hora_limite), fetch=False)
+        else:
+            return execute_query('''
+                INSERT INTO tareas (soportista_id, descripcion, cliente_id, fecha_limite, hora_limite) 
+                VALUES (?, ?, ?, ?, ?)
+            ''', (soportista_id, descripcion, cliente_id, fecha_limite, hora_limite), fetch=False)
+
+def completar_tarea(tarea_id):
+    """Marca una tarea como completada"""
+    if USE_POSTGRES:
+        execute_query('UPDATE tareas SET completada = 1, fecha_completada = CURRENT_TIMESTAMP WHERE id = ?', (tarea_id,), fetch=False)
+    else:
+        execute_query('UPDATE tareas SET completada = 1, fecha_completada = CURRENT_TIMESTAMP WHERE id = ?', (tarea_id,), fetch=False)
+
+def eliminar_tarea(tarea_id):
+    """Elimina una tarea"""
+    execute_query('DELETE FROM tareas WHERE id = ?', (tarea_id,), fetch=False)
+
+def contar_pendientes_total():
+    """Cuenta todos los pendientes (tareas + pendientes de visitas)"""
+    # Tareas pendientes
+    tareas = execute_query('SELECT COUNT(*) as cnt FROM tareas WHERE completada = 0')
+    cnt_tareas = tareas[0]['cnt'] if tareas else 0
+    
+    # Pendientes de visitas
+    visitas = execute_query('SELECT COUNT(*) as cnt FROM visitas WHERE tiene_pendiente = 1 AND pendiente_resuelto = 0')
+    cnt_visitas = visitas[0]['cnt'] if visitas else 0
+    
+    return cnt_tareas + cnt_visitas
+
 # ============== CONFIGURACIÓN ==============
 
 def obtener_config(clave, default=None):

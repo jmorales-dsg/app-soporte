@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.3.2"
+    VERSION = "1.4.0"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -105,9 +105,9 @@ def main(page: ft.Page):
                 shadow=ft.BoxShadow(blur_radius=10, color="#00000020")
             )
         
-        # Contar pendientes
-        pendientes = db.obtener_pendientes()
-        badge_pendientes = f" ({len(pendientes)})" if pendientes else ""
+        # Contar pendientes (tareas + pendientes de visitas)
+        total_pendientes = db.contar_pendientes_total()
+        badge_pendientes = f"\n🔴 {total_pendientes}" if total_pendientes > 0 else ""
         
         contenido = ft.Column([
             # Header con botón reconectar
@@ -580,37 +580,93 @@ def main(page: ft.Page):
     # ============== PANTALLA PENDIENTES ==============
     
     def ir_pendientes():
-        """Muestra lista de pendientes"""
+        """Muestra lista de pendientes (tareas + pendientes de visitas)"""
         page.clean()
         
         lista = ft.ListView(spacing=10, padding=15, expand=True)
+        lbl_contador = ft.Text("", size=14, weight=ft.FontWeight.BOLD, color="#f44336")
         
         def cargar():
             lista.controls.clear()
-            pendientes = db.obtener_pendientes()
-            for p in pendientes:
+            
+            # 1. Tareas independientes
+            tareas = db.obtener_tareas(solo_pendientes=True)
+            # 2. Pendientes de visitas
+            pendientes_visitas = db.obtener_pendientes()
+            
+            total = len(tareas) + len(pendientes_visitas)
+            lbl_contador.value = f"🔴 {total} pendientes" if total > 0 else "✅ Sin pendientes"
+            lbl_contador.color = "#f44336" if total > 0 else "#4caf50"
+            
+            # Mostrar tareas independientes
+            for t in tareas:
+                fecha_info = ""
+                if t.get('fecha_limite'):
+                    fecha_info = f"📅 {t['fecha_limite']}"
+                    if t.get('hora_limite'):
+                        fecha_info += f" 🕐 {t['hora_limite']}"
+                
+                cliente_info = f"👤 {t['cliente_nombre']}" if t.get('cliente_nombre') else ""
+                
                 lista.controls.append(
                     ft.Container(
                         content=ft.Column([
                             ft.Row([
-                                ft.Icon(ft.Icons.WARNING, color="#ff9800", size=20),
+                                ft.Container(
+                                    content=ft.Text("TAREA", size=10, color="white", weight=ft.FontWeight.BOLD),
+                                    bgcolor="#9c27b0",
+                                    padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                                    border_radius=5
+                                ),
+                                ft.Text(t['soportista_nombre'], size=12, color="#666", expand=True),
+                                ft.Text(fecha_info, size=11, color="#ff9800") if fecha_info else ft.Container(),
+                            ]),
+                            ft.Text(t['descripcion'], size=14, weight=ft.FontWeight.W_500),
+                            ft.Text(cliente_info, size=12, color="#666") if cliente_info else ft.Container(),
+                            ft.Row([
+                                ft.TextButton("✅ Completar", on_click=lambda e, id=t['id']: completar_tarea(id)),
+                                ft.TextButton("🗑️ Eliminar", on_click=lambda e, id=t['id']: eliminar_tarea(id)),
+                            ])
+                        ], spacing=5),
+                        bgcolor="white",
+                        border_radius=10,
+                        padding=15,
+                        border=ft.border.all(2, "#9c27b0"),
+                        shadow=ft.BoxShadow(blur_radius=5, color="#00000010")
+                    )
+                )
+            
+            # Mostrar pendientes de visitas
+            for p in pendientes_visitas:
+                lista.controls.append(
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Row([
+                                ft.Container(
+                                    content=ft.Text("VISITA", size=10, color="white", weight=ft.FontWeight.BOLD),
+                                    bgcolor="#ff9800",
+                                    padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                                    border_radius=5
+                                ),
                                 ft.Text(p['cliente_nombre'], weight=ft.FontWeight.BOLD, expand=True),
                                 ft.Text(p['fecha'], size=12, color="#666")
                             ]),
                             ft.Text(p['descripcion_pendiente'] or "Sin descripción", size=13),
                             ft.Text(f"Técnico: {p['soportista_nombre']}", size=11, color="#999"),
                             ft.Row([
-                                ft.TextButton("✅ Resolver", on_click=lambda e, id=p['id']: resolver(id)),
+                                ft.TextButton("✅ Resolver", on_click=lambda e, id=p['id']: resolver_visita(id)),
                                 ft.TextButton("👁️ Ver Boleta", on_click=lambda e, id=p['id']: ver_boleta(id)),
                             ])
                         ], spacing=5),
                         bgcolor="white",
                         border_radius=10,
                         padding=15,
+                        border=ft.border.all(2, "#ff9800"),
                         shadow=ft.BoxShadow(blur_radius=5, color="#00000010")
                     )
                 )
-            if not pendientes:
+            
+            if total == 0:
                 lista.controls.append(
                     ft.Container(
                         content=ft.Column([
@@ -623,16 +679,103 @@ def main(page: ft.Page):
                 )
             page.update()
         
-        def resolver(id):
+        def completar_tarea(id):
+            db.completar_tarea(id)
+            mostrar_mensaje("✅ Tarea completada")
+            cargar()
+        
+        def eliminar_tarea(id):
+            db.eliminar_tarea(id)
+            mostrar_mensaje("🗑️ Tarea eliminada")
+            cargar()
+        
+        def resolver_visita(id):
             db.resolver_pendiente(id)
-            mostrar_mensaje("Pendiente resuelto")
+            mostrar_mensaje("✅ Pendiente resuelto")
             cargar()
         
         def ver_boleta(id):
             visita = db.obtener_visita(id)
             mostrar_detalle_visita(visita)
         
-        page.add(crear_appbar("Pendientes"), lista)
+        def nueva_tarea(e):
+            """Abre diálogo para crear nueva tarea"""
+            soportistas = db.obtener_soportistas()
+            clientes = db.obtener_clientes()
+            
+            dd_soportista = ft.Dropdown(
+                label="Soportista",
+                options=[ft.dropdown.Option(key=str(s['id']), text=s['nombre']) for s in soportistas],
+                value=str(soportistas[0]['id']) if soportistas else "",
+                width=250
+            )
+            dd_cliente = ft.Dropdown(
+                label="Cliente (opcional)",
+                options=[ft.dropdown.Option(key="", text="-- Ninguno --")] + [ft.dropdown.Option(key=str(c['id']), text=c['nombre']) for c in clientes],
+                value="",
+                width=250
+            )
+            txt_descripcion = ft.TextField(label="Descripción", multiline=True, min_lines=2, max_lines=4, width=250)
+            txt_fecha = ft.TextField(label="Fecha límite (opcional)", hint_text="YYYY-MM-DD", width=120)
+            txt_hora = ft.TextField(label="Hora", hint_text="HH:MM", width=80)
+            
+            def cerrar(ev):
+                dlg.open = False
+                page.update()
+            
+            def guardar(ev):
+                if not txt_descripcion.value.strip():
+                    mostrar_mensaje("Ingrese una descripción", True)
+                    return
+                if not dd_soportista.value:
+                    mostrar_mensaje("Seleccione un soportista", True)
+                    return
+                
+                db.guardar_tarea(
+                    soportista_id=int(dd_soportista.value),
+                    descripcion=txt_descripcion.value.strip(),
+                    cliente_id=int(dd_cliente.value) if dd_cliente.value else None,
+                    fecha_limite=txt_fecha.value.strip() if txt_fecha.value.strip() else None,
+                    hora_limite=txt_hora.value.strip() if txt_hora.value.strip() else None
+                )
+                dlg.open = False
+                page.update()
+                mostrar_mensaje("✅ Tarea creada")
+                cargar()
+            
+            dlg = ft.AlertDialog(
+                modal=True,
+                title=ft.Text("📝 Nueva Tarea"),
+                content=ft.Column([
+                    dd_soportista,
+                    txt_descripcion,
+                    dd_cliente,
+                    ft.Row([txt_fecha, txt_hora], spacing=5)
+                ], tight=True, spacing=10),
+                actions=[
+                    ft.TextButton("Cancelar", on_click=cerrar),
+                    ft.ElevatedButton("Guardar", bgcolor="#4caf50", color="white", on_click=guardar),
+                ]
+            )
+            page.overlay.append(dlg)
+            dlg.open = True
+            page.update()
+        
+        page.add(
+            crear_appbar("Pendientes"),
+            ft.Container(
+                content=ft.Column([
+                    ft.Row([
+                        lbl_contador,
+                        ft.Container(expand=True),
+                        ft.ElevatedButton("➕ Nueva Tarea", bgcolor="#9c27b0", color="white", on_click=nueva_tarea)
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    ft.Container(content=lista, expand=True)
+                ], spacing=10),
+                padding=15,
+                expand=True
+            )
+        )
         cargar()
     
     def mostrar_detalle_visita(visita):
