@@ -528,13 +528,16 @@ def main(page: ft.Page):
                     dd_soportista,
                     ft.Row([dd_cliente, chk_ver_todos], spacing=5, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     txt_persona,
-                    ft.Row([btn_fecha_menos, txt_fecha, btn_fecha_mas, btn_fecha_hoy, txt_hora, txt_duracion], 
+                    # Fila 1: Fecha con flechas
+                    ft.Row([btn_fecha_menos, txt_fecha, btn_fecha_mas, btn_fecha_hoy], 
                            spacing=2, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                    # Fila 2: Hora y Duración
+                    ft.Row([txt_hora, ft.Text("Duración:", size=12), txt_duracion, ft.Text("min", size=12)], 
+                           spacing=5, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     txt_trabajo,
-                    chk_pendiente,
+                    # Fila 3: Pendiente y Enviar correo juntos
+                    ft.Row([chk_pendiente, chk_enviar_correo], spacing=10),
                     txt_pendiente,
-                    ft.Divider(),
-                    chk_enviar_correo,
                     ft.ElevatedButton("Guardar Visita", icon=ft.Icons.SAVE, bgcolor="#4caf50", color="white", width=float("inf"), on_click=guardar)
                 ], spacing=12, scroll=ft.ScrollMode.AUTO),
                 padding=20,
