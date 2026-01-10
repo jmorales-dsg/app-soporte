@@ -203,18 +203,26 @@ def generar_html_reporte_imprimible(cliente, visitas, fecha_desde, fecha_hasta, 
     for i, v in enumerate(visitas):
         pendiente_html = ""
         if v['tiene_pendiente'] and not v.get('pendiente_resuelto'):
-            pendiente_html = f'<div style="background:#fff3cd;padding:5px 10px;border-radius:5px;margin-top:5px;font-size:12px;">⚠️ PENDIENTE: {v.get("descripcion_pendiente", "")}</div>'
+            pendiente_html = f'<div style="background:#fff3cd;padding:8px 12px;border-radius:5px;margin-top:8px;font-size:12px;border-left:4px solid #ff9800;">⚠️ PENDIENTE: {v.get("descripcion_pendiente", "")}</div>'
+        
+        persona_atendida = v.get('persona_atendida', '').strip() if v.get('persona_atendida') else ""
+        persona_html = f'<span style="margin-right:20px;">👤 Atendido: {persona_atendida}</span>' if persona_atendida else ""
         
         bg_color = "#f9f9f9" if i % 2 == 0 else "#ffffff"
         
         filas_html += f"""
         <div style="background:{bg_color};padding:15px;margin-bottom:10px;border-radius:8px;border:1px solid #eee;">
-            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-                <span style="font-weight:bold;color:#2196f3;font-size:16px;">{v['fecha']}</span>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <div>
+                    <span style="background:#2196f3;color:white;padding:4px 10px;border-radius:5px;font-weight:bold;font-size:14px;">Boleta #{v['id']}</span>
+                    <span style="font-weight:bold;color:#333;font-size:16px;margin-left:10px;">{v['fecha']}</span>
+                </div>
                 <span style="color:#666;">🕐 {v['hora_inicio']} | ⏱️ {formatear_duracion(v['duracion_minutos'])}</span>
             </div>
-            <div style="color:#666;font-size:13px;margin-bottom:8px;">👷 {v['soportista_nombre']}</div>
-            <div style="background:#f5f5f5;padding:10px;border-radius:5px;font-size:14px;">{v['trabajo_realizado']}</div>
+            <div style="color:#666;font-size:13px;margin-bottom:10px;">
+                {persona_html}👷 Técnico: {v['soportista_nombre']}
+            </div>
+            <div style="background:#f5f5f5;padding:12px;border-radius:5px;font-size:14px;line-height:1.5;">{v['trabajo_realizado']}</div>
             {pendiente_html}
         </div>
         """
