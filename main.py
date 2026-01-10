@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.4.0"
+    VERSION = "1.4.1"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -1027,24 +1027,62 @@ def main(page: ft.Page):
                 mostrar_mensaje("Primero busque boletas", True)
                 return
             
-            # Generar HTML imprimible
+            # Generar texto del reporte
             tiempo_total = db.calcular_tiempo_total(visitas_resultado)
-            html = correo.generar_html_reporte_imprimible(
-                cliente_seleccionado, 
-                visitas_resultado, 
-                txt_desde.value, 
-                txt_hasta.value, 
-                tiempo_total
+            
+            lineas = [
+                "══════════════════════════════════",
+                "   REPORTE DE VISITAS - PcGraf",
+                "══════════════════════════════════",
+                "",
+                f"Cliente: {cliente_seleccionado['nombre']}",
+                f"Período: {txt_desde.value} al {txt_hasta.value}",
+                "",
+                f"📊 RESUMEN: {len(visitas_resultado)} visitas | {db.formatear_duracion(tiempo_total)} total",
+                "",
+                "──────────────────────────────────",
+            ]
+            
+            for v in visitas_resultado:
+                lineas.append("")
+                lineas.append(f"▶ BOLETA #{v.get('id', '?')}")
+                lineas.append(f"  Fecha: {v.get('fecha', '')} | Hora: {v.get('hora_inicio', '')}")
+                lineas.append(f"  Duración: {db.formatear_duracion(v.get('duracion_minutos', 0))}")
+                lineas.append(f"  Técnico: {v.get('soportista_nombre', '')}")
+                if v.get('persona_atendida'):
+                    lineas.append(f"  Atendido: {v.get('persona_atendida')}")
+                lineas.append(f"  Trabajo: {v.get('trabajo_realizado', '')}")
+                if v.get('tiene_pendiente') and not v.get('pendiente_resuelto'):
+                    lineas.append(f"  ⚠️ PENDIENTE: {v.get('descripcion_pendiente', '')}")
+                lineas.append("──────────────────────────────────")
+            
+            lineas.append("")
+            lineas.append(f"Generado: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+            
+            texto = "\n".join(lineas)
+            
+            def cerrar(ev):
+                dlg.open = False
+                page.update()
+            
+            dlg = ft.AlertDialog(
+                modal=True,
+                title=ft.Text("📄 Reporte de Visitas"),
+                content=ft.Column([
+                    ft.Text("Seleccione todo el texto y cópielo:", size=12, color="#666"),
+                    ft.TextField(
+                        value=texto, 
+                        multiline=True, 
+                        min_lines=15, 
+                        max_lines=20,
+                        text_size=11
+                    )
+                ], tight=True, width=350, spacing=10),
+                actions=[ft.TextButton("Cerrar", on_click=cerrar)]
             )
-            
-            # Codificar HTML para abrir en nueva ventana
-            import base64
-            html_b64 = base64.b64encode(html.encode('utf-8')).decode('utf-8')
-            data_url = f"data:text/html;base64,{html_b64}"
-            
-            # Abrir en nueva pestaña - el usuario puede imprimir/guardar como PDF
-            page.launch_url(data_url)
-            mostrar_mensaje("📄 Se abrió el reporte. Toque 'Imprimir' → 'Guardar PDF'")
+            page.overlay.append(dlg)
+            dlg.open = True
+            page.update()
         
         page.add(
             crear_appbar("Consultar Boletas"),
