@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.0.9"
+    VERSION = "1.1.0"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -826,27 +826,45 @@ def main(page: ft.Page):
             mostrar_mensaje(msg, not ok)
         
         def exportar_pdf(e):
-            try:
-                if not visitas_resultado:
-                    mostrar_mensaje("Primero busque boletas", True)
-                    return
-                
-                # Construir texto simple del reporte
-                lineas = [f"REPORTE DE VISITAS", f"Período: {txt_desde.value} al {txt_hasta.value}", ""]
-                
-                for v in visitas_resultado:
-                    lineas.append(f"Boleta #{v.get('id')} - {v.get('fecha')} - {v.get('hora_inicio', 'N/A')}")
-                    lineas.append(f"Técnico: {v.get('soportista_nombre', 'N/A')} | Duración: {db.formatear_duracion(v.get('duracion_minutos', 0))}")
-                    lineas.append(f"Trabajo: {v.get('trabajo_realizado', '')}")
-                    lineas.append("-" * 30)
-                
-                texto = "\n".join(lineas)
-                
-                # Mostrar mensaje con indicación
-                mostrar_mensaje(f"✅ Reporte listo ({len(visitas_resultado)} boletas). Use Ctrl+P para imprimir la página.")
-                
-            except Exception as ex:
-                mostrar_mensaje(f"Error: {str(ex)}", True)
+            if not visitas_resultado:
+                mostrar_mensaje("Primero busque boletas", True)
+                return
+            
+            # Construir texto del reporte
+            lineas = [
+                f"═══ REPORTE DE VISITAS ═══",
+                f"Cliente: {cliente_seleccionado['nombre']}",
+                f"Período: {txt_desde.value} al {txt_hasta.value}",
+                f"Total: {len(visitas_resultado)} visitas",
+                ""
+            ]
+            
+            for v in visitas_resultado:
+                lineas.append(f"▶ Boleta #{v.get('id')} - {v.get('fecha')}")
+                lineas.append(f"  Hora: {v.get('hora_inicio', 'N/A')} | Duración: {db.formatear_duracion(v.get('duracion_minutos', 0))}")
+                lineas.append(f"  Técnico: {v.get('soportista_nombre', 'N/A')}")
+                lineas.append(f"  Trabajo: {v.get('trabajo_realizado', '')}")
+                lineas.append("")
+            
+            texto_reporte = "\n".join(lineas)
+            
+            # Mostrar diálogo con el reporte
+            def cerrar(ev):
+                dlg.open = False
+                page.update()
+            
+            dlg = ft.AlertDialog(
+                modal=True,
+                title=ft.Text("📄 Reporte para Imprimir"),
+                content=ft.Column([
+                    ft.Text("Seleccione todo (Ctrl+A), copie (Ctrl+C) y pegue en Word:", size=12),
+                    ft.TextField(value=texto_reporte, multiline=True, read_only=True, min_lines=12, max_lines=15)
+                ], tight=True, width=350),
+                actions=[ft.TextButton("Cerrar", on_click=cerrar)]
+            )
+            page.overlay.append(dlg)
+            dlg.open = True
+            page.update()
         
         page.add(
             crear_appbar("Consultar Boletas"),
