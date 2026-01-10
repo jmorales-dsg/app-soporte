@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.1.2"
+    VERSION = "1.1.3"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -697,8 +697,8 @@ def main(page: ft.Page):
         hoy = date.today()
         primer_dia_mes = hoy.replace(day=1).strftime('%Y-%m-%d')
         
-        txt_desde = ft.TextField(label="Desde", value=primer_dia_mes, border_radius=10, hint_text="YYYY-MM-DD")
-        txt_hasta = ft.TextField(label="Hasta", value=hoy.strftime('%Y-%m-%d'), border_radius=10, hint_text="YYYY-MM-DD")
+        txt_desde = ft.TextField(label="Desde", value=primer_dia_mes, border_radius=10, width=140, text_size=13)
+        txt_hasta = ft.TextField(label="Hasta", value=hoy.strftime('%Y-%m-%d'), border_radius=10, width=140, text_size=13)
         
         lista = ft.ListView(spacing=10, expand=True)
         lbl_resumen = ft.Text("", size=14, weight=ft.FontWeight.BOLD)
