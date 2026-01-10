@@ -110,13 +110,24 @@ def main(page: ft.Page):
         badge_pendientes = f" ({len(pendientes)})" if pendientes else ""
         
         contenido = ft.Column([
-            # Header
+            # Header con botón reconectar
             ft.Container(
-                content=ft.Column([
-                    ft.Text("📋 PcGraf-Soporte", size=28, weight=ft.FontWeight.BOLD, color="white"),
-                    ft.Text("Gestión de Visitas Técnicas", size=14, color="#ffffffcc"),
-                    ft.Text(f"v{VERSION}", size=10, color="#ffffff88")
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                content=ft.Stack([
+                    ft.Column([
+                        ft.Text("📋 PcGraf-Soporte", size=28, weight=ft.FontWeight.BOLD, color="white"),
+                        ft.Text("Gestión de Visitas Técnicas", size=14, color="#ffffffcc"),
+                        ft.Text(f"v{VERSION}", size=10, color="#ffffff88")
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                    ft.Container(
+                        content=ft.IconButton(
+                            icon=ft.Icons.REFRESH,
+                            icon_color="white",
+                            tooltip="Reconectar",
+                            on_click=reconectar
+                        ),
+                        alignment=ft.alignment.top_right
+                    )
+                ]),
                 bgcolor="#2196f3",
                 padding=30,
                 width=float("inf")
