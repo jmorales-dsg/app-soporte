@@ -373,8 +373,12 @@ def main(page: ft.Page):
                 # Ver todos los clientes
                 clientes_actuales = db.obtener_clientes()
             else:
-                # Solo clientes del soportista
+                # Intentar clientes del soportista
                 clientes_actuales = db.obtener_clientes(soportista_id=int(dd_soportista.value))
+                # Si no hay clientes asignados, cargar todos
+                if not clientes_actuales:
+                    clientes_actuales = db.obtener_clientes()
+                    chk_ver_todos.value = True  # Marcar el checkbox automáticamente
             
             dd_cliente.options = [ft.dropdown.Option(key=str(c['id']), text=c['nombre']) for c in clientes_actuales]
             
@@ -383,7 +387,7 @@ def main(page: ft.Page):
                 dd_cliente.value = ""
             
             if not clientes_actuales:
-                dd_cliente.options = [ft.dropdown.Option(key="", text="-- No hay clientes asignados --")]
+                dd_cliente.options = [ft.dropdown.Option(key="", text="-- No hay clientes --")]
             
             page.update()
         
