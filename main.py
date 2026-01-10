@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.6.5"
+    VERSION = "1.6.6"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -1009,7 +1009,7 @@ def main(page: ft.Page):
             page.update()
         
         def ver_reporte(e):
-            """Muestra el reporte en un diálogo para copiar"""
+            """Navega a pantalla de reporte para copiar"""
             if not visitas_resultado:
                 mostrar_mensaje("Primero busque boletas", True)
                 return
@@ -1030,32 +1030,7 @@ def main(page: ft.Page):
                 lineas.append(f"Técnico: {v.get('soportista_nombre', '')}")
                 lineas.append(f"Trabajo: {v.get('trabajo_realizado', '')}")
             
-            texto = "\n".join(lineas)
-            
-            def cerrar(ev):
-                dlg.open = False
-                page.update()
-            
-            dlg = ft.AlertDialog(
-                modal=True,
-                title=ft.Text("📋 Reporte"),
-                content=ft.Column([
-                    ft.Text("Mantenga presionado → Seleccionar todo → Copiar", size=11, color="#666", italic=True),
-                    ft.TextField(
-                        value=texto,
-                        multiline=True,
-                        min_lines=15,
-                        max_lines=20,
-                        read_only=False,
-                        text_size=11,
-                        border_color="#ccc"
-                    )
-                ], tight=True, width=360, spacing=8),
-                actions=[ft.TextButton("Cerrar", on_click=cerrar)]
-            )
-            page.overlay.append(dlg)
-            dlg.open = True
-            page.update()
+            ir_ver_reporte("\n".join(lineas))
         
         def enviar_reporte(e):
             try:
@@ -1305,6 +1280,37 @@ def main(page: ft.Page):
         )
         page.overlay.append(dlg)
         dlg.open = True
+        page.update()
+    
+    def ir_ver_reporte(texto):
+        """Pantalla para ver y copiar reporte - campo de texto igual que trabajo realizado"""
+        page.clean()
+        
+        txt_reporte = ft.TextField(
+            label="Reporte (3 toques para seleccionar todo)",
+            value=texto,
+            multiline=True,
+            min_lines=20,
+            max_lines=30,
+            border_radius=10,
+            text_size=12
+        )
+        
+        page.add(
+            crear_appbar("Ver Reporte"),
+            ft.Container(
+                content=ft.Column([
+                    ft.Text("Triple toque en el texto para seleccionar todo, luego Copiar", 
+                            size=12, color="#666", italic=True),
+                    txt_reporte,
+                    ft.ElevatedButton("← Volver", icon=ft.Icons.ARROW_BACK, 
+                                      bgcolor="#607d8b", color="white", 
+                                      width=float("inf"), on_click=lambda e: ir_consulta())
+                ], spacing=12),
+                padding=15,
+                expand=True
+            )
+        )
         page.update()
     
     def ir_configuracion():
