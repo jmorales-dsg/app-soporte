@@ -675,48 +675,52 @@ def main(page: ft.Page):
             
             # Lista de visitas
             for v in visitas_resultado:
-                pendiente_texto = "⚠️ PENDIENTE" if (v['tiene_pendiente'] and not v.get('pendiente_resuelto')) else ""
                 persona_atendida = v.get('persona_atendida', '').strip() if v.get('persona_atendida') else ""
+                tiene_pendiente = v.get('tiene_pendiente') and not v.get('pendiente_resuelto')
+                
+                # Construir controles de la tarjeta
+                controles_visita = [
+                    # Fila 1: Boleta, Fecha, Hora, Tiempo
+                    ft.Row([
+                        ft.Container(
+                            content=ft.Text(f"#{v['id']}", size=14, weight=ft.FontWeight.BOLD, color="white"),
+                            bgcolor="#2196f3",
+                            border_radius=5,
+                            padding=ft.padding.symmetric(horizontal=10, vertical=3)
+                        ),
+                        ft.Text(v['fecha'], size=14, weight=ft.FontWeight.BOLD, color="#333"),
+                        ft.Text(f"🕐 {v['hora_inicio']}", size=13, color="#666"),
+                        ft.Text(f"⏱️ {db.formatear_duracion(v['duracion_minutos'])}", size=13, color="#4caf50", weight=ft.FontWeight.BOLD),
+                    ], spacing=10, wrap=True),
+                    # Fila 2: Técnico y Persona atendida
+                    ft.Text(f"👷 Técnico: {v['soportista_nombre']}" + (f"  |  👤 Atendido: {persona_atendida}" if persona_atendida else ""), 
+                           size=12, color="#666"),
+                    # Trabajo realizado
+                    ft.Container(
+                        content=ft.Text(v['trabajo_realizado'], size=13),
+                        bgcolor="#f5f5f5",
+                        border_radius=5,
+                        padding=10
+                    ),
+                ]
+                
+                # Agregar pendiente si existe
+                if tiene_pendiente:
+                    controles_visita.append(
+                        ft.Container(
+                            content=ft.Row([
+                                ft.Text("⚠️ PENDIENTE:", size=12, color="#ff9800", weight=ft.FontWeight.BOLD),
+                                ft.Text(v.get('descripcion_pendiente', ''), size=12, color="#ff9800"),
+                            ], wrap=True),
+                            bgcolor="#fff3cd",
+                            border_radius=5,
+                            padding=8
+                        )
+                    )
                 
                 lista.controls.append(
                     ft.Container(
-                        content=ft.Column([
-                            # Encabezado: número boleta y fecha
-                            ft.Row([
-                                ft.Container(
-                                    content=ft.Text(f"#{v['id']}", size=14, weight=ft.FontWeight.BOLD, color="white"),
-                                    bgcolor="#2196f3",
-                                    border_radius=5,
-                                    padding=ft.padding.symmetric(horizontal=10, vertical=3)
-                                ),
-                                ft.Text(v['fecha'], size=14, weight=ft.FontWeight.BOLD, color="#333"),
-                                ft.Text(f"🕐 {v['hora_inicio']}", size=13, color="#666"),
-                                ft.Text(f"⏱️ {db.formatear_duracion(v['duracion_minutos'])}", size=13, color="#4caf50", weight=ft.FontWeight.BOLD),
-                            ], spacing=10, wrap=True),
-                            # Persona atendida y técnico
-                            ft.Row([
-                                ft.Text(f"👤 Atendido: {persona_atendida if persona_atendida else 'N/A'}", size=12, color="#666", expand=True),
-                                ft.Text(f"👷 {v['soportista_nombre']}", size=12, color="#666"),
-                            ]) if persona_atendida else ft.Text(f"👷 Técnico: {v['soportista_nombre']}", size=12, color="#666"),
-                            # Trabajo realizado (completo)
-                            ft.Container(
-                                content=ft.Text(v['trabajo_realizado'], size=13),
-                                bgcolor="#f5f5f5",
-                                border_radius=5,
-                                padding=10
-                            ),
-                            # Pendiente si existe
-                            ft.Container(
-                                content=ft.Row([
-                                    ft.Text("⚠️ PENDIENTE:", size=12, color="#ff9800", weight=ft.FontWeight.BOLD),
-                                    ft.Text(v.get('descripcion_pendiente', ''), size=12, color="#ff9800"),
-                                ]),
-                                bgcolor="#fff3cd",
-                                border_radius=5,
-                                padding=8,
-                                visible=bool(v['tiene_pendiente'] and not v.get('pendiente_resuelto'))
-                            ),
-                        ], spacing=8),
+                        content=ft.Column(controles_visita, spacing=8),
                         bgcolor="white",
                         border_radius=10,
                         padding=15,
