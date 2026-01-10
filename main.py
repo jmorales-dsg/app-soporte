@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.5.4"
+    VERSION = "1.5.5"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -1342,9 +1342,9 @@ def main(page: ft.Page):
     # Iniciar en pantalla principal
     ir_inicio()
 
-# Ejecutar app
+# Ejecutar app (flet 0.70+)
 ft.app(
-    target=main,
+    main,
     port=int(os.environ.get("PORT", 8080)),
-    view=None
+    view=ft.AppView.WEB_BROWSER
 )
