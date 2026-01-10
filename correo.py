@@ -9,6 +9,8 @@ from database import obtener_config, formatear_duracion
 def enviar_correo(destinatario, asunto, cuerpo_html):
     """Envía un correo electrónico"""
     try:
+        print("CORREO: Iniciando enviar_correo()")
+        
         # Obtener configuración SMTP
         smtp_host = obtener_config('smtp_host', '')
         smtp_port = int(obtener_config('smtp_port', '587'))
@@ -16,7 +18,10 @@ def enviar_correo(destinatario, asunto, cuerpo_html):
         smtp_pass = obtener_config('smtp_pass', '')
         smtp_from = obtener_config('smtp_from', smtp_user)
         
+        print(f"CORREO: Config - host={smtp_host}, port={smtp_port}, user={smtp_user}")
+        
         if not all([smtp_host, smtp_user, smtp_pass]):
+            print("CORREO: Configuración incompleta")
             return False, "Configuración de correo incompleta"
         
         # Crear mensaje
@@ -29,15 +34,28 @@ def enviar_correo(destinatario, asunto, cuerpo_html):
         parte_html = MIMEText(cuerpo_html, 'html', 'utf-8')
         msg.attach(parte_html)
         
-        # Enviar
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
+        print(f"CORREO: Conectando a {smtp_host}:{smtp_port}...")
+        
+        # Enviar con timeout de 30 segundos
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
+            print("CORREO: Conexión OK, iniciando TLS...")
             server.starttls()
+            print("CORREO: TLS OK, haciendo login...")
             server.login(smtp_user, smtp_pass)
+            print("CORREO: Login OK, enviando mensaje...")
             server.send_message(msg)
+            print("CORREO: Mensaje enviado!")
         
         return True, "Correo enviado exitosamente"
     
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"CORREO ERROR Auth: {e}")
+        return False, "Error de autenticación. Verifique usuario/contraseña."
+    except smtplib.SMTPException as e:
+        print(f"CORREO ERROR SMTP: {e}")
+        return False, f"Error SMTP: {str(e)}"
     except Exception as e:
+        print(f"CORREO ERROR General: {e}")
         return False, f"Error al enviar: {str(e)}"
 
 def generar_html_boleta(visita):
