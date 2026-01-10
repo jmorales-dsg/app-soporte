@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.5.0"
+    VERSION = "1.5.1"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -1205,22 +1205,51 @@ def main(page: ft.Page):
         txt_pass = ft.TextField(label="Contraseña", value=db.obtener_config('smtp_pass', ''), password=True, can_reveal_password=True, border_radius=10)
         txt_from = ft.TextField(label="Correo remitente", value=db.obtener_config('smtp_from', ''), border_radius=10)
         
+        lbl_status = ft.Text("", size=12)
+        
         def guardar(e):
-            db.guardar_config('smtp_host', txt_host.value)
-            db.guardar_config('smtp_port', txt_port.value)
-            db.guardar_config('smtp_user', txt_user.value)
-            db.guardar_config('smtp_pass', txt_pass.value)
-            db.guardar_config('smtp_from', txt_from.value or txt_user.value)
-            mostrar_mensaje("Configuración guardada")
+            try:
+                # Quitar espacios de la contraseña (contraseñas de app vienen con espacios)
+                password = txt_pass.value.replace(" ", "") if txt_pass.value else ""
+                
+                db.guardar_config('smtp_host', txt_host.value.strip())
+                db.guardar_config('smtp_port', txt_port.value.strip())
+                db.guardar_config('smtp_user', txt_user.value.strip())
+                db.guardar_config('smtp_pass', password)
+                db.guardar_config('smtp_from', txt_from.value.strip() or txt_user.value.strip())
+                
+                lbl_status.value = "✅ Configuración guardada"
+                lbl_status.color = "#4caf50"
+                page.update()
+            except Exception as ex:
+                lbl_status.value = f"❌ Error: {str(ex)}"
+                lbl_status.color = "#f44336"
+                page.update()
         
         def probar(e):
-            guardar(e)
-            ok, msg = correo.enviar_correo(
-                txt_user.value,
-                "Prueba App Soporte",
-                "<h1>✅ Configuración correcta</h1><p>El correo funciona correctamente.</p>"
-            )
-            mostrar_mensaje(msg, not ok)
+            try:
+                guardar(e)
+                lbl_status.value = "📤 Enviando correo de prueba..."
+                lbl_status.color = "#2196f3"
+                page.update()
+                
+                ok, msg = correo.enviar_correo(
+                    txt_user.value.strip(),
+                    "Prueba App Soporte",
+                    "<h1>✅ Configuración correcta</h1><p>El correo funciona correctamente.</p>"
+                )
+                
+                if ok:
+                    lbl_status.value = f"✅ {msg}"
+                    lbl_status.color = "#4caf50"
+                else:
+                    lbl_status.value = f"❌ {msg}"
+                    lbl_status.color = "#f44336"
+                page.update()
+            except Exception as ex:
+                lbl_status.value = f"❌ Error: {str(ex)}"
+                lbl_status.color = "#f44336"
+                page.update()
         
         page.add(
             crear_appbar("Configuración"),
@@ -1233,9 +1262,10 @@ def main(page: ft.Page):
                     txt_pass,
                     txt_from,
                     ft.Row([
-                        ft.ElevatedButton("Guardar", icon=ft.Icons.SAVE, bgcolor="#4caf50", color="white", expand=True, on_click=guardar),
-                        ft.ElevatedButton("Probar", icon=ft.Icons.SEND, bgcolor="#2196f3", color="white", expand=True, on_click=probar),
-                    ], spacing=10)
+                        ft.ElevatedButton("💾 Guardar", bgcolor="#4caf50", color="white", expand=True, on_click=guardar),
+                        ft.ElevatedButton("📤 Probar", bgcolor="#2196f3", color="white", expand=True, on_click=probar),
+                    ], spacing=10),
+                    lbl_status
                 ], spacing=12, scroll=ft.ScrollMode.AUTO),
                 padding=20
             )
