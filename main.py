@@ -25,6 +25,12 @@ def main(page: ft.Page):
     
     # ============== COMPONENTES COMUNES ==============
     
+    def reconectar(e):
+        """Recarga la página para reconectar"""
+        page.controls.clear()
+        page.update()
+        ir_inicio()
+    
     def crear_appbar(titulo, mostrar_atras=True):
         """Crea una barra de aplicación estándar"""
         return ft.AppBar(
@@ -36,7 +42,14 @@ def main(page: ft.Page):
             title=ft.Text(titulo, size=18, weight=ft.FontWeight.BOLD),
             center_title=True,
             bgcolor="#2196f3",
-            color="white"
+            color="white",
+            actions=[
+                ft.IconButton(
+                    icon=ft.Icons.REFRESH,
+                    tooltip="Reconectar",
+                    on_click=reconectar
+                )
+            ]
         )
     
     def mostrar_mensaje(texto, es_error=False):
