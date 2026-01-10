@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.3.0"
+    VERSION = "1.3.1"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -884,41 +884,24 @@ def main(page: ft.Page):
                 mostrar_mensaje("Primero busque boletas", True)
                 return
             
-            # Construir texto del reporte
-            lineas = [
-                f"═══ REPORTE DE VISITAS ═══",
-                f"Cliente: {cliente_seleccionado['nombre']}",
-                f"Período: {txt_desde.value} al {txt_hasta.value}",
-                f"Total: {len(visitas_resultado)} visitas",
-                ""
-            ]
-            
-            for v in visitas_resultado:
-                lineas.append(f"▶ Boleta #{v.get('id')} - {v.get('fecha')}")
-                lineas.append(f"  Hora: {v.get('hora_inicio', 'N/A')} | Duración: {db.formatear_duracion(v.get('duracion_minutos', 0))}")
-                lineas.append(f"  Técnico: {v.get('soportista_nombre', 'N/A')}")
-                lineas.append(f"  Trabajo: {v.get('trabajo_realizado', '')}")
-                lineas.append("")
-            
-            texto_reporte = "\n".join(lineas)
-            
-            # Mostrar diálogo con el reporte - SIMPLE
-            def cerrar(ev):
-                dlg.open = False
-                page.update()
-            
-            dlg = ft.AlertDialog(
-                modal=True,
-                title=ft.Text("📄 Reporte"),
-                content=ft.Column([
-                    ft.Text("📱 Seleccione el texto, cópielo y péguelo donde desee:", size=12, color="#666666"),
-                    ft.TextField(value=texto_reporte, multiline=True, min_lines=12, max_lines=15)
-                ], tight=True, width=350, spacing=10),
-                actions=[ft.TextButton("Cerrar", on_click=cerrar)]
+            # Generar HTML imprimible
+            tiempo_total = db.calcular_tiempo_total(visitas_resultado)
+            html = correo.generar_html_reporte_imprimible(
+                cliente_seleccionado, 
+                visitas_resultado, 
+                txt_desde.value, 
+                txt_hasta.value, 
+                tiempo_total
             )
-            page.overlay.append(dlg)
-            dlg.open = True
-            page.update()
+            
+            # Codificar HTML para abrir en nueva ventana
+            import base64
+            html_b64 = base64.b64encode(html.encode('utf-8')).decode('utf-8')
+            data_url = f"data:text/html;base64,{html_b64}"
+            
+            # Abrir en nueva pestaña - el usuario puede imprimir/guardar como PDF
+            page.launch_url(data_url)
+            mostrar_mensaje("📄 Se abrió el reporte. Toque 'Imprimir' → 'Guardar PDF'")
         
         page.add(
             crear_appbar("Consultar Boletas"),
