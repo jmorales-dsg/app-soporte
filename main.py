@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.6.1"
+    VERSION = "1.6.2"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -1008,8 +1008,10 @@ def main(page: ft.Page):
             lbl_resumen.value = ""
             page.update()
         
-        def copiar_reporte(e):
-            """Muestra el reporte en un campo para copiar manualmente"""
+        def descargar_reporte(e):
+            """Descarga el reporte como archivo .txt"""
+            import urllib.parse
+            
             if not visitas_resultado:
                 mostrar_mensaje("Primero busque boletas", True)
                 return
@@ -1032,30 +1034,14 @@ def main(page: ft.Page):
             
             texto = "\n".join(lineas)
             
-            def cerrar(ev):
-                dlg.open = False
-                page.update()
+            # Codificar para URL
+            texto_encoded = urllib.parse.quote(texto)
             
-            # Mostrar en diálogo con campo de texto seleccionable
-            dlg = ft.AlertDialog(
-                modal=True,
-                title=ft.Text("📋 Reporte - Seleccione y Copie"),
-                content=ft.Column([
-                    ft.Text("Toque el texto, Ctrl+A (seleccionar todo), Ctrl+C (copiar)", size=11, color="#666"),
-                    ft.TextField(
-                        value=texto,
-                        multiline=True,
-                        min_lines=12,
-                        max_lines=18,
-                        read_only=False,
-                        text_size=11
-                    )
-                ], tight=True, width=380, spacing=8),
-                actions=[ft.TextButton("Cerrar", on_click=cerrar)]
-            )
-            page.overlay.append(dlg)
-            dlg.open = True
-            page.update()
+            # Descargar como archivo .txt
+            data_url = f"data:text/plain;charset=utf-8,{texto_encoded}"
+            page.launch_url(data_url)
+            
+            mostrar_mensaje("📥 Descargando reporte...")
         
         def enviar_reporte(e):
             try:
@@ -1100,7 +1086,7 @@ def main(page: ft.Page):
                     ft.Row([txt_desde, btn_cal_desde, txt_hasta, btn_cal_hasta], spacing=2, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     ft.ElevatedButton("Buscar", icon=ft.Icons.SEARCH, bgcolor="#2196f3", color="white", width=float("inf"), on_click=buscar),
                     ft.Row([
-                        ft.ElevatedButton("📋 Ver/Copiar Reporte", bgcolor="#ff9800", color="white", expand=True, on_click=copiar_reporte),
+                        ft.ElevatedButton("📥 Descargar Reporte", bgcolor="#ff9800", color="white", expand=True, on_click=descargar_reporte),
                         ft.ElevatedButton("📧 Enviar Correo", bgcolor="#4caf50", color="white", expand=True, on_click=enviar_reporte),
                     ], spacing=10),
                     lbl_resumen,
