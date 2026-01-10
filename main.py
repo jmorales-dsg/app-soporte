@@ -644,14 +644,38 @@ def main(page: ft.Page):
             )
             
             lista.controls.clear()
-            for v in visitas_resultado:
-                pendiente_badge = ft.Container(
-                    content=ft.Text("⚠️ PENDIENTE", size=10, color="white", weight=ft.FontWeight.BOLD),
-                    bgcolor="#ff9800",
-                    border_radius=5,
-                    padding=ft.padding.symmetric(horizontal=8, vertical=2),
-                    visible=v['tiene_pendiente'] and not v.get('pendiente_resuelto')
+            
+            # Resumen al inicio
+            if visitas_resultado:
+                tiempo_total = db.calcular_tiempo_total(visitas_resultado)
+                lista.controls.append(
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Container(
+                                content=ft.Column([
+                                    ft.Text(str(len(visitas_resultado)), size=28, weight=ft.FontWeight.BOLD, color="#2196f3"),
+                                    ft.Text("Visitas", size=12, color="#666")
+                                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
+                                expand=True
+                            ),
+                            ft.Container(width=1, height=50, bgcolor="#ccc"),
+                            ft.Container(
+                                content=ft.Column([
+                                    ft.Text(db.formatear_duracion(tiempo_total), size=28, weight=ft.FontWeight.BOLD, color="#4caf50"),
+                                    ft.Text("Tiempo Total", size=12, color="#666")
+                                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
+                                expand=True
+                            ),
+                        ]),
+                        bgcolor="#e3f2fd",
+                        border_radius=10,
+                        padding=15
+                    )
                 )
+            
+            # Lista de visitas
+            for v in visitas_resultado:
+                pendiente_texto = "⚠️ PENDIENTE" if (v['tiene_pendiente'] and not v.get('pendiente_resuelto')) else ""
                 
                 lista.controls.append(
                     ft.Container(
@@ -660,14 +684,9 @@ def main(page: ft.Page):
                             ft.Row([
                                 ft.Text(v['fecha'], size=14, weight=ft.FontWeight.BOLD, color="#2196f3"),
                                 ft.Text(f"🕐 {v['hora_inicio']}", size=12, color="#666"),
-                                ft.Container(
-                                    content=ft.Text(db.formatear_duracion(v['duracion_minutos']), size=12, color="white"),
-                                    bgcolor="#4caf50",
-                                    border_radius=5,
-                                    padding=ft.padding.symmetric(horizontal=8, vertical=2)
-                                ),
-                                pendiente_badge,
-                            ], spacing=10),
+                                ft.Text(f"⏱️ {db.formatear_duracion(v['duracion_minutos'])}", size=12, color="#4caf50", weight=ft.FontWeight.BOLD),
+                                ft.Text(pendiente_texto, size=11, color="#ff9800", weight=ft.FontWeight.BOLD),
+                            ], spacing=10, wrap=True),
                             # Técnico
                             ft.Text(f"👷 {v['soportista_nombre']}", size=12, color="#666"),
                             # Trabajo realizado (completo)
@@ -675,51 +694,26 @@ def main(page: ft.Page):
                                 content=ft.Text(v['trabajo_realizado'], size=13),
                                 bgcolor="#f5f5f5",
                                 border_radius=5,
-                                padding=10,
-                                width=float("inf")
+                                padding=10
                             ),
                             # Pendiente si existe
-                            ft.Container(
-                                content=ft.Text(f"📌 {v.get('descripcion_pendiente', '')}", size=12, color="#ff9800"),
-                                visible=bool(v['tiene_pendiente'] and v.get('descripcion_pendiente'))
-                            ),
+                            ft.Text(f"📌 {v.get('descripcion_pendiente', '')}", size=12, color="#ff9800",
+                                   visible=bool(v['tiene_pendiente'] and v.get('descripcion_pendiente'))),
                         ], spacing=8),
                         bgcolor="white",
                         border_radius=10,
                         padding=15,
-                        shadow=ft.BoxShadow(blur_radius=5, color="#00000015"),
                         on_click=lambda e, vis=v: mostrar_detalle_visita(vis)
                     )
                 )
             
-            tiempo_total = db.calcular_tiempo_total(visitas_resultado)
-            
-            # Resumen más visible
-            lbl_resumen.value = ""
-            lbl_resumen.visible = False
-            
-            # Agregar resumen al inicio de la lista
-            if visitas_resultado:
-                lista.controls.insert(0, 
-                    ft.Container(
-                        content=ft.Row([
-                            ft.Column([
-                                ft.Text(str(len(visitas_resultado)), size=28, weight=ft.FontWeight.BOLD, color="#2196f3"),
-                                ft.Text("Visitas", size=12, color="#666")
-                            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
-                            ft.VerticalDivider(width=1, color="#ddd"),
-                            ft.Column([
-                                ft.Text(db.formatear_duracion(tiempo_total), size=28, weight=ft.FontWeight.BOLD, color="#4caf50"),
-                                ft.Text("Tiempo Total", size=12, color="#666")
-                            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
-                        ], alignment=ft.MainAxisAlignment.SPACE_EVENLY),
-                        bgcolor="#e3f2fd",
-                        border_radius=10,
-                        padding=15,
-                        margin=ft.margin.only(bottom=10)
-                    )
+            if not visitas_resultado:
+                lista.controls.append(
+                    ft.Text("No se encontraron visitas en el período seleccionado", 
+                           text_align=ft.TextAlign.CENTER, color="#666")
                 )
             
+            lbl_resumen.value = ""
             page.update()
         
         def enviar_reporte(e):
