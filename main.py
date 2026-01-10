@@ -415,9 +415,10 @@ def main(page: ft.Page):
             label="Trabajo Realizado *",
             value=visita.get('trabajo_realizado', ''),
             multiline=True,
-            min_lines=5,
-            max_lines=8,
-            border_radius=10
+            min_lines=6,
+            max_lines=10,
+            border_radius=10,
+            text_size=14
         )
         
         chk_pendiente = ft.Checkbox(label="¿Quedó pendiente?", value=visita.get('tiene_pendiente', False))
