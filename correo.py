@@ -37,14 +37,25 @@ def enviar_correo(destinatario, asunto, cuerpo_html):
         print(f"CORREO: Conectando a {smtp_host}:{smtp_port}...")
         
         # Enviar con timeout de 30 segundos
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
-            print("CORREO: Conexión OK, iniciando TLS...")
-            server.starttls()
-            print("CORREO: TLS OK, haciendo login...")
-            server.login(smtp_user, smtp_pass)
-            print("CORREO: Login OK, enviando mensaje...")
-            server.send_message(msg)
-            print("CORREO: Mensaje enviado!")
+        # Usar SSL para puerto 465, TLS para 587
+        if smtp_port == 465:
+            print("CORREO: Usando SMTP_SSL (puerto 465)...")
+            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=30) as server:
+                print("CORREO: Conexión SSL OK, haciendo login...")
+                server.login(smtp_user, smtp_pass)
+                print("CORREO: Login OK, enviando mensaje...")
+                server.send_message(msg)
+                print("CORREO: Mensaje enviado!")
+        else:
+            print("CORREO: Usando SMTP con TLS...")
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
+                print("CORREO: Conexión OK, iniciando TLS...")
+                server.starttls()
+                print("CORREO: TLS OK, haciendo login...")
+                server.login(smtp_user, smtp_pass)
+                print("CORREO: Login OK, enviando mensaje...")
+                server.send_message(msg)
+                print("CORREO: Mensaje enviado!")
         
         return True, "Correo enviado exitosamente"
     

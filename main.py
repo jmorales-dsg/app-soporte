@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.5.6"
+    VERSION = "1.5.7"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
