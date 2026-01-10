@@ -677,25 +677,19 @@ def main(page: ft.Page):
             for v in visitas_resultado:
                 persona_atendida = v.get('persona_atendida', '').strip() if v.get('persona_atendida') else ""
                 tiene_pendiente = v.get('tiene_pendiente') and not v.get('pendiente_resuelto')
+                tecnico_texto = f"👷 {v['soportista_nombre']}"
+                if persona_atendida:
+                    tecnico_texto += f"  |  👤 {persona_atendida}"
                 
-                # Construir controles de la tarjeta
+                # Construir controles de la tarjeta - cada línea separada
                 controles_visita = [
-                    # Fila 1: Boleta, Fecha, Hora, Tiempo
-                    ft.Row([
-                        ft.Container(
-                            content=ft.Text(f"#{v['id']}", size=14, weight=ft.FontWeight.BOLD, color="white"),
-                            bgcolor="#2196f3",
-                            border_radius=5,
-                            padding=ft.padding.symmetric(horizontal=10, vertical=3)
-                        ),
-                        ft.Text(v['fecha'], size=14, weight=ft.FontWeight.BOLD, color="#333"),
-                        ft.Text(f"🕐 {v['hora_inicio']}", size=13, color="#666"),
-                        ft.Text(f"⏱️ {db.formatear_duracion(v['duracion_minutos'])}", size=13, color="#4caf50", weight=ft.FontWeight.BOLD),
-                    ], spacing=10, wrap=True),
-                    # Fila 2: Técnico y Persona atendida
-                    ft.Text(f"👷 Técnico: {v['soportista_nombre']}" + (f"  |  👤 Atendido: {persona_atendida}" if persona_atendida else ""), 
-                           size=12, color="#666"),
-                    # Trabajo realizado
+                    # Línea 1: Boleta y Fecha
+                    ft.Text(f"📋 Boleta #{v['id']}  -  {v['fecha']}", size=15, weight=ft.FontWeight.BOLD, color="#2196f3"),
+                    # Línea 2: Hora y Tiempo
+                    ft.Text(f"🕐 Hora: {v['hora_inicio']}   ⏱️ Duración: {db.formatear_duracion(v['duracion_minutos'])}", size=13, color="#333"),
+                    # Línea 3: Técnico y Persona atendida
+                    ft.Text(tecnico_texto, size=12, color="#666"),
+                    # Línea 4: Trabajo realizado
                     ft.Container(
                         content=ft.Text(v['trabajo_realizado'], size=13),
                         bgcolor="#f5f5f5",
@@ -708,10 +702,7 @@ def main(page: ft.Page):
                 if tiene_pendiente:
                     controles_visita.append(
                         ft.Container(
-                            content=ft.Row([
-                                ft.Text("⚠️ PENDIENTE:", size=12, color="#ff9800", weight=ft.FontWeight.BOLD),
-                                ft.Text(v.get('descripcion_pendiente', ''), size=12, color="#ff9800"),
-                            ], wrap=True),
+                            content=ft.Text(f"⚠️ PENDIENTE: {v.get('descripcion_pendiente', '')}", size=12, color="#ff9800"),
                             bgcolor="#fff3cd",
                             border_radius=5,
                             padding=8
@@ -720,11 +711,12 @@ def main(page: ft.Page):
                 
                 lista.controls.append(
                     ft.Container(
-                        content=ft.Column(controles_visita, spacing=8),
+                        content=ft.Column(controles_visita, spacing=5),
                         bgcolor="white",
                         border_radius=10,
                         padding=15,
-                        margin=ft.margin.only(bottom=5),
+                        margin=ft.margin.only(bottom=10),
+                        border=ft.border.all(1, "#e0e0e0"),
                         on_click=lambda e, vis=v: mostrar_detalle_visita(vis)
                     )
                 )
