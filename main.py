@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.1.1"
+    VERSION = "1.1.2"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -751,7 +751,7 @@ def main(page: ft.Page):
                     )
                 )
             
-            # Lista de visitas - SIMPLIFICADO
+            # Lista de visitas - CON LABELS EXPLÍCITOS
             for v in visitas_resultado:
                 boleta_id = v.get('id', '?')
                 fecha = v.get('fecha', 'Sin fecha')
@@ -760,15 +760,17 @@ def main(page: ft.Page):
                 soportista = v.get('soportista_nombre', 'SIN TÉCNICO')
                 trabajo = v.get('trabajo_realizado', '(sin detalle)')
                 
-                # Crear Card simple
+                # Crear Card con cada campo en línea separada
                 card = ft.Card(
                     content=ft.Container(
                         content=ft.Column([
                             ft.Text(f"📋 Boleta #{boleta_id} - {fecha}", size=14, weight=ft.FontWeight.BOLD, color="#1976d2"),
-                            ft.Text(f"🕐 {hora}  ⏱️ {db.formatear_duracion(duracion)}  👷 {soportista}", size=12, color="#666"),
+                            ft.Text(f"Hora: {hora}", size=12),
+                            ft.Text(f"Duración: {db.formatear_duracion(duracion)}", size=12),
+                            ft.Text(f"Técnico: {soportista}", size=12),
                             ft.Divider(height=1),
-                            ft.Text(trabajo, size=13),
-                        ], spacing=5),
+                            ft.Text(f"Trabajo: {trabajo}", size=13),
+                        ], spacing=3),
                         padding=12
                     )
                 )
