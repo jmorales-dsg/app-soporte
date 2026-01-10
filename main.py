@@ -10,8 +10,11 @@ import correo
 def main(page: ft.Page):
     """Aplicación principal"""
     
+    # VERSIÓN - cambiar con cada deploy para verificar
+    VERSION = "1.0.5"
+    
     # Configuración de la página
-    page.title = "PcGraf-Soporte"
+    page.title = f"PcGraf-Soporte v{VERSION}"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.padding = 0
     page.window_width = 450
@@ -98,7 +101,8 @@ def main(page: ft.Page):
             ft.Container(
                 content=ft.Column([
                     ft.Text("📋 PcGraf-Soporte", size=28, weight=ft.FontWeight.BOLD, color="white"),
-                    ft.Text("Gestión de Visitas Técnicas", size=14, color="#ffffffcc")
+                    ft.Text("Gestión de Visitas Técnicas", size=14, color="#ffffffcc"),
+                    ft.Text(f"v{VERSION}", size=10, color="#ffffff88")
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                 bgcolor="#2196f3",
                 padding=30,
@@ -364,13 +368,15 @@ def main(page: ft.Page):
         if not opciones_clientes:
             opciones_clientes = [ft.dropdown.Option(key="", text="-- No hay clientes --")]
         
-        # Dropdown de clientes - YA con opciones cargadas
+        # Dropdown de clientes - YA con opciones cargadas, con búsqueda
         dd_cliente = ft.Dropdown(
             label="Cliente *",
             options=opciones_clientes,
             value=str(visita.get('cliente_id', '')) if visita.get('cliente_id') else "",
             border_radius=10,
-            expand=True
+            expand=True,
+            enable_filter=True,
+            editable=True
         )
         
         # Checkbox para ver todos los clientes
