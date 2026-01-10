@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.5.2"
+    VERSION = "1.5.3"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -53,12 +53,21 @@ def main(page: ft.Page):
         )
     
     def mostrar_mensaje(texto, es_error=False):
-        """Muestra un mensaje temporal"""
-        page.snack_bar = ft.SnackBar(
-            content=ft.Text(texto, color="white"),
-            bgcolor="#f44336" if es_error else "#4caf50"
+        """Muestra un mensaje temporal usando diálogo"""
+        print(f"MENSAJE: {texto}")  # Debug
+        
+        def cerrar(ev):
+            dlg.open = False
+            page.update()
+        
+        dlg = ft.AlertDialog(
+            modal=False,
+            title=ft.Text("❌ Error" if es_error else "✅ Info", color="#f44336" if es_error else "#4caf50"),
+            content=ft.Text(texto),
+            actions=[ft.TextButton("OK", on_click=cerrar)]
         )
-        page.snack_bar.open = True
+        page.overlay.append(dlg)
+        dlg.open = True
         page.update()
     
     def confirmar_accion(titulo, mensaje, on_confirmar):
@@ -1004,23 +1013,36 @@ def main(page: ft.Page):
             page.update()
         
         def enviar_reporte(e):
-            if not visitas_resultado:
-                mostrar_mensaje("Primero busque boletas", True)
-                return
-            
-            cliente = db.obtener_cliente(int(cliente_seleccionado["id"]))
-            if not cliente.get('correo'):
-                mostrar_mensaje("El cliente no tiene correo", True)
-                return
-            
-            tiempo_total = db.calcular_tiempo_total(visitas_resultado)
-            html = correo.generar_html_reporte(cliente, visitas_resultado, txt_desde.value, txt_hasta.value, tiempo_total)
-            ok, msg = correo.enviar_correo(
-                cliente['correo'],
-                f"Reporte de Visitas {txt_desde.value} al {txt_hasta.value}",
-                html
-            )
-            mostrar_mensaje(msg, not ok)
+            try:
+                if not visitas_resultado:
+                    mostrar_mensaje("Primero busque boletas", True)
+                    return
+                
+                if not cliente_seleccionado:
+                    mostrar_mensaje("Seleccione un cliente", True)
+                    return
+                
+                cliente = db.obtener_cliente(int(cliente_seleccionado["id"]))
+                if not cliente:
+                    mostrar_mensaje("Cliente no encontrado", True)
+                    return
+                    
+                if not cliente.get('correo'):
+                    mostrar_mensaje(f"El cliente {cliente.get('nombre', '')} no tiene correo configurado", True)
+                    return
+                
+                mostrar_mensaje("📤 Enviando correo...")
+                
+                tiempo_total = db.calcular_tiempo_total(visitas_resultado)
+                html = correo.generar_html_reporte(cliente, visitas_resultado, txt_desde.value, txt_hasta.value, tiempo_total)
+                ok, msg = correo.enviar_correo(
+                    cliente['correo'],
+                    f"Reporte de Visitas {txt_desde.value} al {txt_hasta.value}",
+                    html
+                )
+                mostrar_mensaje(msg, not ok)
+            except Exception as ex:
+                mostrar_mensaje(f"Error: {str(ex)}", True)
         
         page.add(
             crear_appbar("Consultar Boletas"),
