@@ -379,6 +379,71 @@ def formatear_duracion(minutos):
         return f"{horas}h {mins}m"
     return f"{mins}m"
 
+# ============== ESTADÍSTICAS ==============
+
+def obtener_estadisticas_clientes(soportista_id=None, fecha_desde=None, fecha_hasta=None):
+    """Obtiene resumen de boletas por cliente: cantidad y tiempo total"""
+    sql = '''
+        SELECT c.id, c.nombre as cliente_nombre, 
+               COUNT(v.id) as cantidad_boletas,
+               COALESCE(SUM(v.duracion_minutos), 0) as tiempo_total
+        FROM clientes c
+        LEFT JOIN visitas v ON c.id = v.cliente_id
+    '''
+    params = []
+    where_clauses = ['c.activo = 1']
+    
+    # Filtros de fecha solo aplican a las visitas
+    if fecha_desde:
+        where_clauses.append('(v.fecha >= ? OR v.id IS NULL)')
+        params.append(fecha_desde)
+    if fecha_hasta:
+        where_clauses.append('(v.fecha <= ? OR v.id IS NULL)')
+        params.append(fecha_hasta)
+    if soportista_id:
+        where_clauses.append('c.soportista_id = ?')
+        params.append(soportista_id)
+    
+    if where_clauses:
+        sql += ' WHERE ' + ' AND '.join(where_clauses)
+    
+    sql += ' GROUP BY c.id, c.nombre ORDER BY c.nombre'
+    
+    return execute_query(sql, params if params else None)
+
+def obtener_clientes_sin_boletas(soportista_id=None, fecha_desde=None, fecha_hasta=None):
+    """Obtiene clientes que NO tuvieron boletas en el período"""
+    # Primero obtenemos los IDs de clientes que SÍ tienen boletas en el período
+    sql_con_boletas = '''
+        SELECT DISTINCT cliente_id FROM visitas WHERE 1=1
+    '''
+    params_boletas = []
+    
+    if fecha_desde:
+        sql_con_boletas += ' AND fecha >= ?'
+        params_boletas.append(fecha_desde)
+    if fecha_hasta:
+        sql_con_boletas += ' AND fecha <= ?'
+        params_boletas.append(fecha_hasta)
+    
+    # Ahora buscamos clientes que NO están en esa lista
+    sql = f'''
+        SELECT c.id, c.nombre as cliente_nombre, s.nombre as soportista_nombre
+        FROM clientes c
+        LEFT JOIN soportistas s ON c.soportista_id = s.id
+        WHERE c.activo = 1 
+        AND c.id NOT IN ({sql_con_boletas})
+    '''
+    params = params_boletas.copy()
+    
+    if soportista_id:
+        sql += ' AND c.soportista_id = ?'
+        params.append(soportista_id)
+    
+    sql += ' ORDER BY c.nombre'
+    
+    return execute_query(sql, params if params else None)
+
 # ============== CONFIGURACIÓN ==============
 
 def obtener_config(clave, default=None):

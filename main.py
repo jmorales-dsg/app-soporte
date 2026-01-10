@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.2.8"
+    VERSION = "1.3.0"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -146,10 +146,13 @@ def main(page: ft.Page):
                     ], alignment=ft.MainAxisAlignment.CENTER, spacing=15),
                     ft.Row([
                         crear_boton_menu(ft.Icons.SEARCH, "Consultar\nBoletas", lambda e: ir_consulta()),
-                        crear_boton_menu(ft.Icons.PEOPLE, "Clientes", lambda e: ir_clientes()),
+                        crear_boton_menu(ft.Icons.ANALYTICS, "Estadísticas", lambda e: ir_estadisticas(), "#9c27b0"),
                     ], alignment=ft.MainAxisAlignment.CENTER, spacing=15),
                     ft.Row([
+                        crear_boton_menu(ft.Icons.PEOPLE, "Clientes", lambda e: ir_clientes()),
                         crear_boton_menu(ft.Icons.ENGINEERING, "Soportistas", lambda e: ir_soportistas()),
+                    ], alignment=ft.MainAxisAlignment.CENTER, spacing=15),
+                    ft.Row([
                         crear_boton_menu(ft.Icons.SETTINGS, "Configuración", lambda e: ir_configuracion(), "#757575"),
                     ], alignment=ft.MainAxisAlignment.CENTER, spacing=15),
                 ], spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
@@ -899,56 +902,17 @@ def main(page: ft.Page):
             
             texto_reporte = "\n".join(lineas)
             
-            # Mostrar diálogo con el reporte
+            # Mostrar diálogo con el reporte - SIMPLE
             def cerrar(ev):
                 dlg.open = False
                 page.update()
             
-            btn_copiar_ref = ft.Ref[ft.ElevatedButton]()
-            txt_reporte_ref = ft.Ref[ft.TextField]()
-            
-            async def copiar_reporte(ev):
-                try:
-                    # Intentar con JavaScript (funciona mejor en iOS)
-                    js_code = f'''
-                    (async () => {{
-                        try {{
-                            await navigator.clipboard.writeText(`{texto_reporte.replace('`', "'").replace('\\', '\\\\')}`);
-                            return 'ok';
-                        }} catch(e) {{
-                            return 'error';
-                        }}
-                    }})()
-                    '''
-                    result = await page.run_javascript_async(js_code)
-                    if result == 'ok':
-                        btn_copiar_ref.current.text = "✅ ¡Copiado!"
-                        btn_copiar_ref.current.bgcolor = "#4caf50"
-                    else:
-                        raise Exception("JS clipboard failed")
-                except:
-                    # Fallback: intentar método de Flet
-                    try:
-                        page.set_clipboard(texto_reporte)
-                        btn_copiar_ref.current.text = "✅ ¡Copiado!"
-                        btn_copiar_ref.current.bgcolor = "#4caf50"
-                    except:
-                        # Si todo falla, dar instrucciones
-                        btn_copiar_ref.current.text = "📱 Mantén presionado el texto → Copiar"
-                        btn_copiar_ref.current.bgcolor = "#ff9800"
-                page.update()
-            
-            txt_reporte = ft.TextField(value=texto_reporte, multiline=True, read_only=False, min_lines=10, max_lines=12, ref=txt_reporte_ref)
-            
             dlg = ft.AlertDialog(
                 modal=True,
-                title=ft.Text("📄 Reporte para Imprimir"),
+                title=ft.Text("📄 Reporte"),
                 content=ft.Column([
-                    ft.Text("Toque 'Copiar' y pegue en Word o WhatsApp:", size=12),
-                    txt_reporte,
-                    ft.Row([
-                        ft.ElevatedButton("📋 Copiar Todo", bgcolor="#2196f3", color="white", on_click=copiar_reporte, ref=btn_copiar_ref),
-                    ], alignment=ft.MainAxisAlignment.CENTER)
+                    ft.Text("📱 Seleccione el texto, cópielo y péguelo donde desee:", size=12, color="#666666"),
+                    ft.TextField(value=texto_reporte, multiline=True, min_lines=12, max_lines=15)
                 ], tight=True, width=350, spacing=10),
                 actions=[ft.TextButton("Cerrar", on_click=cerrar)]
             )
@@ -977,6 +941,142 @@ def main(page: ft.Page):
         page.update()
     
     # ============== PANTALLA CONFIGURACIÓN ==============
+    
+    def ir_estadisticas():
+        """Pantalla de estadísticas de clientes"""
+        page.clean()
+        
+        soportistas = db.obtener_soportistas()
+        opciones_sop = [ft.dropdown.Option(key="", text="-- Todos --")] + [
+            ft.dropdown.Option(key=str(s['id']), text=s['nombre']) for s in soportistas
+        ]
+        
+        dd_soportista = ft.Dropdown(label="Soportista", options=opciones_sop, value="", width=200)
+        txt_desde = ft.TextField(label="Desde", value=date.today().replace(day=1).strftime('%Y-%m-%d'), width=130)
+        txt_hasta = ft.TextField(label="Hasta", value=date.today().strftime('%Y-%m-%d'), width=130)
+        chk_sin_boletas = ft.Checkbox(label="Solo sin boletas", value=False)
+        
+        lista = ft.ListView(expand=True, spacing=5)
+        lbl_resumen = ft.Text("", size=14, weight=ft.FontWeight.BOLD)
+        
+        def buscar(e):
+            lista.controls.clear()
+            sop_id = int(dd_soportista.value) if dd_soportista.value else None
+            
+            if chk_sin_boletas.value:
+                # Clientes SIN boletas en el período
+                resultados = db.obtener_clientes_sin_boletas(sop_id, txt_desde.value, txt_hasta.value)
+                lbl_resumen.value = f"🚫 {len(resultados)} clientes SIN atender en el período"
+                lbl_resumen.color = "#f44336"
+                
+                for r in resultados:
+                    lista.controls.append(
+                        ft.Card(
+                            content=ft.Container(
+                                content=ft.Column([
+                                    ft.Text(r['cliente_nombre'], weight=ft.FontWeight.BOLD, size=14),
+                                    ft.Text(f"Soportista: {r.get('soportista_nombre', 'Sin asignar')}", size=12, color="#666666")
+                                ], spacing=2),
+                                padding=10
+                            )
+                        )
+                    )
+            else:
+                # Resumen por cliente
+                resultados = db.obtener_estadisticas_clientes(sop_id, txt_desde.value, txt_hasta.value)
+                total_boletas = sum(r['cantidad_boletas'] for r in resultados)
+                total_tiempo = sum(r['tiempo_total'] for r in resultados)
+                lbl_resumen.value = f"📊 {len(resultados)} clientes | {total_boletas} boletas | {db.formatear_duracion(total_tiempo)}"
+                lbl_resumen.color = "#2196f3"
+                
+                for r in resultados:
+                    cant = r['cantidad_boletas']
+                    tiempo = db.formatear_duracion(r['tiempo_total'])
+                    color = "#4caf50" if cant > 0 else "#ff9800"
+                    
+                    lista.controls.append(
+                        ft.Card(
+                            content=ft.Container(
+                                content=ft.Row([
+                                    ft.Column([
+                                        ft.Text(r['cliente_nombre'], weight=ft.FontWeight.BOLD, size=14),
+                                    ], expand=True),
+                                    ft.Column([
+                                        ft.Text(f"{cant} boletas", size=12, color=color, weight=ft.FontWeight.BOLD),
+                                        ft.Text(tiempo, size=11, color="#666666"),
+                                    ], horizontal_alignment=ft.CrossAxisAlignment.END)
+                                ]),
+                                padding=10
+                            )
+                        )
+                    )
+            
+            page.update()
+        
+        def exportar(e):
+            sop_id = int(dd_soportista.value) if dd_soportista.value else None
+            
+            if chk_sin_boletas.value:
+                resultados = db.obtener_clientes_sin_boletas(sop_id, txt_desde.value, txt_hasta.value)
+                lineas = [
+                    "═══ CLIENTES SIN ATENDER ═══",
+                    f"Período: {txt_desde.value} al {txt_hasta.value}",
+                    f"Total: {len(resultados)} clientes",
+                    ""
+                ]
+                for r in resultados:
+                    lineas.append(f"• {r['cliente_nombre']}")
+            else:
+                resultados = db.obtener_estadisticas_clientes(sop_id, txt_desde.value, txt_hasta.value)
+                total_boletas = sum(r['cantidad_boletas'] for r in resultados)
+                total_tiempo = sum(r['tiempo_total'] for r in resultados)
+                lineas = [
+                    "═══ RESUMEN DE ATENCIÓN ═══",
+                    f"Período: {txt_desde.value} al {txt_hasta.value}",
+                    f"Total: {total_boletas} boletas | {db.formatear_duracion(total_tiempo)}",
+                    ""
+                ]
+                for r in resultados:
+                    lineas.append(f"• {r['cliente_nombre']}: {r['cantidad_boletas']} boletas, {db.formatear_duracion(r['tiempo_total'])}")
+            
+            texto = "\n".join(lineas)
+            
+            def cerrar(ev):
+                dlg.open = False
+                page.update()
+            
+            dlg = ft.AlertDialog(
+                modal=True,
+                title=ft.Text("📊 Reporte"),
+                content=ft.Column([
+                    ft.Text("📱 Seleccione, copie y pegue:", size=12, color="#666666"),
+                    ft.TextField(value=texto, multiline=True, min_lines=12, max_lines=15)
+                ], tight=True, width=350, spacing=10),
+                actions=[ft.TextButton("Cerrar", on_click=cerrar)]
+            )
+            page.overlay.append(dlg)
+            dlg.open = True
+            page.update()
+        
+        page.add(
+            crear_appbar("Estadísticas"),
+            ft.Container(
+                content=ft.Column([
+                    ft.Row([dd_soportista], alignment=ft.MainAxisAlignment.CENTER),
+                    ft.Row([txt_desde, txt_hasta], alignment=ft.MainAxisAlignment.CENTER, spacing=5),
+                    chk_sin_boletas,
+                    ft.Row([
+                        ft.ElevatedButton("🔍 Buscar", bgcolor="#2196f3", color="white", on_click=buscar),
+                        ft.ElevatedButton("📄 Exportar", bgcolor="#ff9800", color="white", on_click=exportar),
+                    ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
+                    lbl_resumen,
+                    ft.Container(content=lista, expand=True, border=ft.border.all(1, "#e0e0e0"), border_radius=10)
+                ], spacing=10),
+                padding=15,
+                expand=True
+            )
+        )
+        page.update()
     
     def ir_configuracion():
         """Pantalla de configuración"""
