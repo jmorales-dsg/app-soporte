@@ -675,23 +675,31 @@ def main(page: ft.Page):
             
             # Lista de visitas
             for v in visitas_resultado:
+                # Obtener datos con valores por defecto si no existen
+                boleta_id = v.get('id', '?')
+                fecha = v.get('fecha', 'Sin fecha')
+                hora = v.get('hora_inicio', 'N/A')
+                duracion = v.get('duracion_minutos', 0)
+                soportista = v.get('soportista_nombre', 'Sin asignar')
+                trabajo = v.get('trabajo_realizado', '')
                 persona_atendida = v.get('persona_atendida', '').strip() if v.get('persona_atendida') else ""
                 tiene_pendiente = v.get('tiene_pendiente') and not v.get('pendiente_resuelto')
-                tecnico_texto = f"👷 {v['soportista_nombre']}"
+                
+                tecnico_texto = f"👷 Técnico: {soportista}"
                 if persona_atendida:
-                    tecnico_texto += f"  |  👤 {persona_atendida}"
+                    tecnico_texto += f"  |  👤 Atendido: {persona_atendida}"
                 
                 # Construir controles de la tarjeta - cada línea separada
                 controles_visita = [
                     # Línea 1: Boleta y Fecha
-                    ft.Text(f"📋 Boleta #{v['id']}  -  {v['fecha']}", size=15, weight=ft.FontWeight.BOLD, color="#2196f3"),
+                    ft.Text(f"📋 Boleta #{boleta_id}  -  {fecha}", size=15, weight=ft.FontWeight.BOLD, color="#2196f3"),
                     # Línea 2: Hora y Tiempo
-                    ft.Text(f"🕐 Hora: {v['hora_inicio']}   ⏱️ Duración: {db.formatear_duracion(v['duracion_minutos'])}", size=13, color="#333"),
+                    ft.Text(f"🕐 Hora: {hora}   ⏱️ Duración: {db.formatear_duracion(duracion)}", size=13, color="#333"),
                     # Línea 3: Técnico y Persona atendida
                     ft.Text(tecnico_texto, size=12, color="#666"),
                     # Línea 4: Trabajo realizado
                     ft.Container(
-                        content=ft.Text(v['trabajo_realizado'], size=13),
+                        content=ft.Text(trabajo, size=13),
                         bgcolor="#f5f5f5",
                         border_radius=5,
                         padding=10
