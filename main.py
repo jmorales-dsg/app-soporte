@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.6.2"
+    VERSION = "1.6.3"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -1008,7 +1008,7 @@ def main(page: ft.Page):
             lbl_resumen.value = ""
             page.update()
         
-        def descargar_reporte(e):
+        async def descargar_reporte(e):
             """Descarga el reporte como archivo .txt"""
             import urllib.parse
             
@@ -1039,9 +1039,9 @@ def main(page: ft.Page):
             
             # Descargar como archivo .txt
             data_url = f"data:text/plain;charset=utf-8,{texto_encoded}"
-            page.launch_url(data_url)
+            await page.launch_url_async(data_url)
             
-            mostrar_mensaje("📥 Descargando reporte...")
+            mostrar_mensaje("📥 Reporte descargado")
         
         def enviar_reporte(e):
             try:
