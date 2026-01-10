@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.5.1"
+    VERSION = "1.5.2"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -153,7 +153,7 @@ def main(page: ft.Page):
                         crear_boton_menu(ft.Icons.ENGINEERING, "Soportistas", lambda e: ir_soportistas()),
                     ], alignment=ft.MainAxisAlignment.CENTER, spacing=15),
                     ft.Row([
-                        crear_boton_menu(ft.Icons.SETTINGS, "Configuración", lambda e: ir_configuracion(), "#757575"),
+                        crear_boton_menu(ft.Icons.SETTINGS, "Configuración", lambda e: pedir_clave_config(), "#757575"),
                     ], alignment=ft.MainAxisAlignment.CENTER, spacing=15),
                 ], spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                 padding=20,
@@ -1193,6 +1193,48 @@ def main(page: ft.Page):
                 expand=True
             )
         )
+        page.update()
+    
+    def pedir_clave_config():
+        """Pide clave antes de entrar a configuración"""
+        txt_clave = ft.TextField(
+            label="Clave de acceso",
+            password=True,
+            can_reveal_password=True,
+            autofocus=True,
+            width=250,
+            on_submit=lambda e: verificar(e)
+        )
+        lbl_error = ft.Text("", color="#f44336", size=12)
+        
+        def cerrar(ev):
+            dlg.open = False
+            page.update()
+        
+        def verificar(ev):
+            if txt_clave.value == "dsgpc":
+                dlg.open = False
+                page.update()
+                ir_configuracion()
+            else:
+                lbl_error.value = "❌ Clave incorrecta"
+                page.update()
+        
+        dlg = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("🔒 Acceso restringido"),
+            content=ft.Column([
+                ft.Text("Ingrese la clave para acceder a configuración:", size=13),
+                txt_clave,
+                lbl_error
+            ], tight=True, spacing=10),
+            actions=[
+                ft.TextButton("Cancelar", on_click=cerrar),
+                ft.ElevatedButton("Entrar", bgcolor="#4caf50", color="white", on_click=verificar),
+            ]
+        )
+        page.overlay.append(dlg)
+        dlg.open = True
         page.update()
     
     def ir_configuracion():
