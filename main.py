@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.2.6"
+    VERSION = "1.2.7"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -901,21 +901,40 @@ def main(page: ft.Page):
                 page.update()
             
             btn_copiar_ref = ft.Ref[ft.ElevatedButton]()
+            txt_reporte_ref = ft.Ref[ft.TextField]()
             
-            def copiar_reporte(ev):
+            async def copiar_reporte(ev):
                 try:
-                    page.set_clipboard(texto_reporte)
-                    # Cambiar el botón para confirmar visualmente
-                    btn_copiar_ref.current.text = "✅ ¡Copiado!"
-                    btn_copiar_ref.current.bgcolor = "#4caf50"
-                    page.update()
-                except Exception as e:
-                    btn_copiar_ref.current.text = "❌ Error"
-                    btn_copiar_ref.current.bgcolor = "#f44336"
-                    page.update()
-                    print(f"Error clipboard: {e}")
+                    # Intentar con JavaScript (funciona mejor en iOS)
+                    js_code = f'''
+                    (async () => {{
+                        try {{
+                            await navigator.clipboard.writeText(`{texto_reporte.replace('`', "'").replace('\\', '\\\\')}`);
+                            return 'ok';
+                        }} catch(e) {{
+                            return 'error';
+                        }}
+                    }})()
+                    '''
+                    result = await page.run_javascript_async(js_code)
+                    if result == 'ok':
+                        btn_copiar_ref.current.text = "✅ ¡Copiado!"
+                        btn_copiar_ref.current.bgcolor = "#4caf50"
+                    else:
+                        raise Exception("JS clipboard failed")
+                except:
+                    # Fallback: intentar método de Flet
+                    try:
+                        page.set_clipboard(texto_reporte)
+                        btn_copiar_ref.current.text = "✅ ¡Copiado!"
+                        btn_copiar_ref.current.bgcolor = "#4caf50"
+                    except:
+                        # Si todo falla, dar instrucciones
+                        btn_copiar_ref.current.text = "📱 Mantén presionado el texto → Copiar"
+                        btn_copiar_ref.current.bgcolor = "#ff9800"
+                page.update()
             
-            txt_reporte = ft.TextField(value=texto_reporte, multiline=True, read_only=True, min_lines=10, max_lines=12)
+            txt_reporte = ft.TextField(value=texto_reporte, multiline=True, read_only=False, min_lines=10, max_lines=12, ref=txt_reporte_ref)
             
             dlg = ft.AlertDialog(
                 modal=True,
