@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.3.1"
+    VERSION = "1.3.2"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -935,9 +935,27 @@ def main(page: ft.Page):
         ]
         
         dd_soportista = ft.Dropdown(label="Soportista", options=opciones_sop, value="", width=200)
-        txt_desde = ft.TextField(label="Desde", value=date.today().replace(day=1).strftime('%Y-%m-%d'), width=130)
-        txt_hasta = ft.TextField(label="Hasta", value=date.today().strftime('%Y-%m-%d'), width=130)
+        txt_desde = ft.TextField(label="Desde", value=date.today().replace(day=1).strftime('%Y-%m-%d'), width=120)
+        txt_hasta = ft.TextField(label="Hasta", value=date.today().strftime('%Y-%m-%d'), width=120)
         chk_sin_boletas = ft.Checkbox(label="Solo sin boletas", value=False)
+        
+        # DatePickers para estadísticas
+        def on_pick_desde(e):
+            if e.control.value:
+                txt_desde.value = e.control.value.strftime('%Y-%m-%d')
+                page.update()
+        
+        def on_pick_hasta(e):
+            if e.control.value:
+                txt_hasta.value = e.control.value.strftime('%Y-%m-%d')
+                page.update()
+        
+        picker_desde = ft.DatePicker(on_change=on_pick_desde)
+        picker_hasta = ft.DatePicker(on_change=on_pick_hasta)
+        page.overlay.extend([picker_desde, picker_hasta])
+        
+        btn_cal_desde = ft.IconButton(icon=ft.Icons.CALENDAR_MONTH, on_click=lambda e: picker_desde.pick_date(), tooltip="Calendario")
+        btn_cal_hasta = ft.IconButton(icon=ft.Icons.CALENDAR_MONTH, on_click=lambda e: picker_hasta.pick_date(), tooltip="Calendario")
         
         lista = ft.ListView(expand=True, spacing=5)
         lbl_resumen = ft.Text("", size=14, weight=ft.FontWeight.BOLD)
@@ -1046,7 +1064,7 @@ def main(page: ft.Page):
             ft.Container(
                 content=ft.Column([
                     ft.Row([dd_soportista], alignment=ft.MainAxisAlignment.CENTER),
-                    ft.Row([txt_desde, txt_hasta], alignment=ft.MainAxisAlignment.CENTER, spacing=5),
+                    ft.Row([txt_desde, btn_cal_desde, txt_hasta, btn_cal_hasta], alignment=ft.MainAxisAlignment.CENTER, spacing=2),
                     chk_sin_boletas,
                     ft.Row([
                         ft.ElevatedButton("🔍 Buscar", bgcolor="#2196f3", color="white", on_click=buscar),
