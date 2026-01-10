@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.6.4"
+    VERSION = "1.6.5"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -1099,10 +1099,7 @@ def main(page: ft.Page):
                     contenedor_cliente,
                     ft.Row([txt_desde, btn_cal_desde, txt_hasta, btn_cal_hasta], spacing=2, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     ft.ElevatedButton("Buscar", icon=ft.Icons.SEARCH, bgcolor="#2196f3", color="white", width=float("inf"), on_click=buscar),
-                    ft.Row([
-                        ft.ElevatedButton("📋 Ver Reporte", bgcolor="#ff9800", color="white", expand=True, on_click=ver_reporte),
-                        ft.ElevatedButton("📧 Enviar Correo", bgcolor="#4caf50", color="white", expand=True, on_click=enviar_reporte),
-                    ], spacing=10),
+                    ft.ElevatedButton("📋 Ver Reporte", bgcolor="#ff9800", color="white", width=float("inf"), on_click=ver_reporte),
                     lbl_resumen,
                     lista
                 ], spacing=12),
