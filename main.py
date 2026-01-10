@@ -356,11 +356,12 @@ def main(page: ft.Page):
         # Checkbox para ver todos los clientes
         chk_ver_todos = ft.Checkbox(label="Ver todos los clientes", value=False)
         
-        # Dropdown de soportistas
+        # Dropdown de soportistas - preseleccionar el primero si es visita nueva
+        soportista_inicial = str(visita.get('soportista_id', '')) if visita.get('soportista_id') else str(soportistas[0]['id'])
         dd_soportista = ft.Dropdown(
             label="Técnico *",
             options=[ft.dropdown.Option(key=str(s['id']), text=s['nombre']) for s in soportistas],
-            value=str(visita.get('soportista_id', '')) if visita.get('soportista_id') else "",
+            value=soportista_inicial,
             border_radius=10
         )
         
@@ -475,9 +476,8 @@ def main(page: ft.Page):
             
             ir_inicio()
         
-        # Cargar clientes iniciales si hay soportista seleccionado
-        if visita.get('soportista_id'):
-            actualizar_clientes()
+        # Cargar clientes iniciales (siempre hay soportista preseleccionado)
+        actualizar_clientes()
         
         page.add(
             crear_appbar("Editar Visita" if id else "Nueva Visita"),
