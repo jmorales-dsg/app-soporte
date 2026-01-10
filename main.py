@@ -17,6 +17,9 @@ def main(page: ft.Page):
     page.window_width = 450
     page.window_height = 750
     
+    # Variable de sesión para recordar el soportista seleccionado
+    soportista_sesion = {"id": None}
+    
     # ============== COMPONENTES COMUNES ==============
     
     def crear_appbar(titulo, mostrar_atras=True):
@@ -341,8 +344,13 @@ def main(page: ft.Page):
             ir_soportistas()
             return
         
-        # Determinar soportista inicial
-        soportista_inicial = str(visita.get('soportista_id', '')) if visita.get('soportista_id') else str(soportistas[0]['id'])
+        # Determinar soportista inicial - usar el de sesión si existe
+        if visita.get('soportista_id'):
+            soportista_inicial = str(visita.get('soportista_id'))
+        elif soportista_sesion["id"]:
+            soportista_inicial = str(soportista_sesion["id"])
+        else:
+            soportista_inicial = str(soportistas[0]['id'])
         
         # Cargar clientes ANTES de crear el dropdown
         clientes_actuales = db.obtener_clientes(soportista_id=int(soportista_inicial))
@@ -456,6 +464,9 @@ def main(page: ft.Page):
             except:
                 mostrar_mensaje("Duración debe ser un número", True)
                 return
+            
+            # Guardar soportista en sesión para próximas visitas
+            soportista_sesion["id"] = int(dd_soportista.value)
             
             visita_id = db.guardar_visita(
                 cliente_id=int(dd_cliente.value),
@@ -687,27 +698,21 @@ def main(page: ft.Page):
             for v in visitas_resultado:
                 # Obtener datos con valores por defecto si no existen
                 boleta_id = v.get('id', '?')
-                fecha = v.get('fecha', 'Sin fecha')
-                hora = v.get('hora_inicio', 'N/A')
-                duracion = v.get('duracion_minutos', 0)
-                soportista = v.get('soportista_nombre', 'Sin asignar')
-                trabajo = v.get('trabajo_realizado', '')
-                persona_atendida = v.get('persona_atendida', '').strip() if v.get('persona_atendida') else ""
+                fecha = v.get('fecha') or 'Sin fecha'
+                hora = v.get('hora_inicio') or '??:??'
+                duracion = v.get('duracion_minutos') or 0
+                soportista = v.get('soportista_nombre') or 'SIN TÉCNICO'
+                trabajo = v.get('trabajo_realizado') or ''
+                persona_atendida = (v.get('persona_atendida') or '').strip()
                 tiene_pendiente = v.get('tiene_pendiente') and not v.get('pendiente_resuelto')
-                
-                tecnico_texto = f"👷 Técnico: {soportista}"
-                if persona_atendida:
-                    tecnico_texto += f"  |  👤 Atendido: {persona_atendida}"
                 
                 # Construir controles de la tarjeta - cada línea separada
                 controles_visita = [
                     # Línea 1: Boleta y Fecha
                     ft.Text(f"📋 Boleta #{boleta_id}  -  {fecha}", size=15, weight=ft.FontWeight.BOLD, color="#2196f3"),
-                    # Línea 2: Hora y Tiempo
-                    ft.Text(f"🕐 Hora: {hora}   ⏱️ Duración: {db.formatear_duracion(duracion)}", size=13, color="#333"),
-                    # Línea 3: Técnico y Persona atendida
-                    ft.Text(tecnico_texto, size=12, color="#666"),
-                    # Línea 4: Trabajo realizado
+                    # Línea 2: Hora y Tiempo  
+                    ft.Text(f"🕐 {hora}  ⏱️ {db.formatear_duracion(duracion)}  👷 {soportista}", size=13, color="#333"),
+                    # Línea 3: Trabajo realizado
                     ft.Container(
                         content=ft.Text(trabajo, size=13),
                         bgcolor="#f5f5f5",
@@ -715,6 +720,10 @@ def main(page: ft.Page):
                         padding=10
                     ),
                 ]
+                
+                # Agregar persona atendida si existe
+                if persona_atendida:
+                    controles_visita.insert(2, ft.Text(f"👤 Atendido: {persona_atendida}", size=12, color="#666"))
                 
                 # Agregar pendiente si existe
                 if tiene_pendiente:
