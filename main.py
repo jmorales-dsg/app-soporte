@@ -341,23 +341,34 @@ def main(page: ft.Page):
             ir_soportistas()
             return
         
-        # Variable para almacenar clientes filtrados
-        clientes_actuales = []
+        # Determinar soportista inicial
+        soportista_inicial = str(visita.get('soportista_id', '')) if visita.get('soportista_id') else str(soportistas[0]['id'])
         
-        # Dropdown de clientes (se llenará al seleccionar soportista)
+        # Cargar clientes ANTES de crear el dropdown
+        clientes_actuales = db.obtener_clientes(soportista_id=int(soportista_inicial))
+        ver_todos_inicial = False
+        if not clientes_actuales:
+            clientes_actuales = db.obtener_clientes()
+            ver_todos_inicial = True
+        
+        # Crear opciones de clientes
+        opciones_clientes = [ft.dropdown.Option(key=str(c['id']), text=c['nombre']) for c in clientes_actuales]
+        if not opciones_clientes:
+            opciones_clientes = [ft.dropdown.Option(key="", text="-- No hay clientes --")]
+        
+        # Dropdown de clientes - YA con opciones cargadas
         dd_cliente = ft.Dropdown(
             label="Cliente *",
-            options=[],
+            options=opciones_clientes,
             value=str(visita.get('cliente_id', '')) if visita.get('cliente_id') else "",
             border_radius=10,
             expand=True
         )
         
         # Checkbox para ver todos los clientes
-        chk_ver_todos = ft.Checkbox(label="Ver todos los clientes", value=False)
+        chk_ver_todos = ft.Checkbox(label="Ver todos los clientes", value=ver_todos_inicial)
         
-        # Dropdown de soportistas - preseleccionar el primero si es visita nueva
-        soportista_inicial = str(visita.get('soportista_id', '')) if visita.get('soportista_id') else str(soportistas[0]['id'])
+        # Dropdown de soportistas
         dd_soportista = ft.Dropdown(
             label="Técnico *",
             options=[ft.dropdown.Option(key=str(s['id']), text=s['nombre']) for s in soportistas],
@@ -370,19 +381,15 @@ def main(page: ft.Page):
             nonlocal clientes_actuales
             
             if chk_ver_todos.value or not dd_soportista.value:
-                # Ver todos los clientes
                 clientes_actuales = db.obtener_clientes()
             else:
-                # Intentar clientes del soportista
                 clientes_actuales = db.obtener_clientes(soportista_id=int(dd_soportista.value))
-                # Si no hay clientes asignados, cargar todos
                 if not clientes_actuales:
                     clientes_actuales = db.obtener_clientes()
-                    chk_ver_todos.value = True  # Marcar el checkbox automáticamente
+                    chk_ver_todos.value = True
             
             dd_cliente.options = [ft.dropdown.Option(key=str(c['id']), text=c['nombre']) for c in clientes_actuales]
             
-            # Si el cliente actual no está en la lista, limpiar selección
             if dd_cliente.value and not any(str(c['id']) == dd_cliente.value for c in clientes_actuales):
                 dd_cliente.value = ""
             
@@ -479,9 +486,6 @@ def main(page: ft.Page):
                     mostrar_mensaje("El cliente no tiene correo configurado", True)
             
             ir_inicio()
-        
-        # Cargar clientes iniciales (siempre hay soportista preseleccionado)
-        actualizar_clientes()
         
         page.add(
             crear_appbar("Editar Visita" if id else "Nueva Visita"),
