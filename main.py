@@ -42,10 +42,13 @@ def main(page: ft.Page):
             page.update()
         
         def marcar_completada(e):
-            label.style = ft.TextStyle(
-                decoration=ft.TextDecoration.LINE_THROUGH if checkbox.value else None,
-                color=ft.colors.GREY_500 if checkbox.value else None
-            )
+            if checkbox.value:
+                label.style = ft.TextStyle(
+                    decoration=ft.TextDecoration.LINE_THROUGH,
+                    color="#9e9e9e"
+                )
+            else:
+                label.style = None
             page.update()
         
         checkbox = ft.Checkbox(
@@ -56,15 +59,15 @@ def main(page: ft.Page):
         label = ft.Text(texto, expand=True, size=14)
         
         btn_eliminar = ft.IconButton(
-            icon=ft.icons.DELETE_OUTLINE,
-            icon_color=ft.colors.RED_400,
+            icon=ft.Icons.DELETE_OUTLINE,
+            icon_color="#ef5350",
             tooltip="Eliminar",
             on_click=eliminar_tarea
         )
         
         contenedor = ft.Container(
             content=ft.Row([checkbox, label, btn_eliminar]),
-            bgcolor=ft.colors.GREY_100,
+            bgcolor="#f5f5f5",
             border_radius=10,
             padding=10
         )
@@ -75,7 +78,7 @@ def main(page: ft.Page):
     encabezado = ft.Container(
         content=ft.Column([
             ft.Text("📋 App Soporte", size=24, weight=ft.FontWeight.BOLD),
-            ft.Text("Gestiona tus pendientes", size=14, color=ft.colors.GREY_600)
+            ft.Text("Gestiona tus pendientes", size=14, color="#757575")
         ]),
         margin=ft.margin.only(bottom=20)
     )
@@ -84,8 +87,8 @@ def main(page: ft.Page):
     barra_agregar = ft.Row([
         nueva_tarea,
         ft.IconButton(
-            icon=ft.icons.ADD_CIRCLE,
-            icon_color=ft.colors.BLUE,
+            icon=ft.Icons.ADD_CIRCLE,
+            icon_color="#2196f3",
             icon_size=35,
             tooltip="Agregar tarea",
             on_click=agregar_tarea
@@ -108,4 +111,3 @@ ft.app(
     port=int(os.environ.get("PORT", 8080)),
     view=None  # None = modo servidor web
 )
-
