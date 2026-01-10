@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.0.7"
+    VERSION = "1.0.8"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -670,6 +670,10 @@ def main(page: ft.Page):
                 txt_hasta.value
             )
             
+            # DEBUG: imprimir datos de la primera visita
+            if visitas_resultado:
+                print(f"DEBUG v1.0.8 - Primera visita: {visitas_resultado[0]}")
+            
             lista.controls.clear()
             
             # Resumen al inicio
@@ -775,66 +779,27 @@ def main(page: ft.Page):
             mostrar_mensaje(msg, not ok)
         
         def exportar_pdf(e):
-            if not visitas_resultado:
-                mostrar_mensaje("Primero busque boletas", True)
-                return
-            
-            cliente = db.obtener_cliente(int(dd_cliente.value))
-            tiempo_total = db.calcular_tiempo_total(visitas_resultado)
-            
-            # Construir texto del reporte
-            lineas = []
-            lineas.append(f"REPORTE DE VISITAS - {cliente['nombre']}")
-            lineas.append(f"Período: {txt_desde.value} al {txt_hasta.value}")
-            lineas.append(f"Total: {len(visitas_resultado)} visitas, {db.formatear_duracion(tiempo_total)}")
-            lineas.append("=" * 50)
-            
-            for v in visitas_resultado:
-                lineas.append(f"\n📋 Boleta #{v.get('id')} - {v.get('fecha')}")
-                lineas.append(f"🕐 {v.get('hora_inicio', 'N/A')} | ⏱️ {db.formatear_duracion(v.get('duracion_minutos', 0))} | 👷 {v.get('soportista_nombre', 'N/A')}")
-                if v.get('persona_atendida'):
-                    lineas.append(f"👤 Atendido: {v.get('persona_atendida')}")
-                lineas.append(f"Trabajo: {v.get('trabajo_realizado', '')}")
-                if v.get('tiene_pendiente') and not v.get('pendiente_resuelto'):
-                    lineas.append(f"⚠️ PENDIENTE: {v.get('descripcion_pendiente', '')}")
-                lineas.append("-" * 40)
-            
-            texto_reporte = "\n".join(lineas)
-            
-            # Mostrar en diálogo para copiar
-            def cerrar_dlg(e):
-                dlg.open = False
-                page.update()
-            
-            def copiar_texto(e):
-                page.set_clipboard(texto_reporte)
-                mostrar_mensaje("✅ Copiado al portapapeles")
-            
-            dlg = ft.AlertDialog(
-                title=ft.Text("📄 Reporte de Visitas"),
-                content=ft.Container(
-                    content=ft.Column([
-                        ft.Text("Copie el texto y péguelo en Word/Excel para imprimir:", size=12, color="#666"),
-                        ft.TextField(
-                            value=texto_reporte,
-                            multiline=True,
-                            read_only=True,
-                            min_lines=15,
-                            max_lines=20,
-                            text_size=11
-                        )
-                    ], scroll=ft.ScrollMode.AUTO),
-                    width=400,
-                    height=400
-                ),
-                actions=[
-                    ft.TextButton("📋 Copiar", on_click=copiar_texto),
-                    ft.TextButton("Cerrar", on_click=cerrar_dlg),
-                ]
-            )
-            page.overlay.append(dlg)
-            dlg.open = True
-            page.update()
+            try:
+                if not visitas_resultado:
+                    mostrar_mensaje("Primero busque boletas", True)
+                    return
+                
+                # Construir texto simple del reporte
+                lineas = [f"REPORTE DE VISITAS", f"Período: {txt_desde.value} al {txt_hasta.value}", ""]
+                
+                for v in visitas_resultado:
+                    lineas.append(f"Boleta #{v.get('id')} - {v.get('fecha')} - {v.get('hora_inicio', 'N/A')}")
+                    lineas.append(f"Técnico: {v.get('soportista_nombre', 'N/A')} | Duración: {db.formatear_duracion(v.get('duracion_minutos', 0))}")
+                    lineas.append(f"Trabajo: {v.get('trabajo_realizado', '')}")
+                    lineas.append("-" * 30)
+                
+                texto = "\n".join(lineas)
+                
+                # Mostrar mensaje con indicación
+                mostrar_mensaje(f"✅ Reporte listo ({len(visitas_resultado)} boletas). Use Ctrl+P para imprimir la página.")
+                
+            except Exception as ex:
+                mostrar_mensaje(f"Error: {str(ex)}", True)
         
         page.add(
             crear_appbar("Consultar Boletas"),
