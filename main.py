@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.5.9"
+    VERSION = "1.6.0"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -1008,7 +1008,7 @@ def main(page: ft.Page):
             lbl_resumen.value = ""
             page.update()
         
-        async def copiar_reporte(e):
+        def copiar_reporte(e):
             """Copia el reporte al portapapeles usando JavaScript"""
             if not visitas_resultado:
                 mostrar_mensaje("Primero busque boletas", True)
@@ -1031,14 +1031,12 @@ def main(page: ft.Page):
                 lineas.append(f"Trabajo: {v.get('trabajo_realizado', '')}")
             
             texto = "\n".join(lineas)
-            # Escapar caracteres especiales para JavaScript
-            texto_js = texto.replace("\\", "\\\\").replace("`", "\\`").replace("$", "\\$")
+            # Escapar para JavaScript
+            texto_js = texto.replace("\\", "\\\\").replace("`", "\\`").replace("$", "\\$").replace("\n", "\\n")
             
             try:
-                # Copiar usando JavaScript
-                await page.client_storage.set_async("temp_copy", texto)
-                js = f"navigator.clipboard.writeText(`{texto_js}`)"
-                await page.run_javascript_async(js)
+                # Copiar usando JavaScript - forma síncrona
+                page.run_javascript(f"navigator.clipboard.writeText(`{texto_js}`)")
                 mostrar_mensaje("✅ Reporte copiado al portapapeles")
             except Exception as ex:
                 print(f"Error copiando: {ex}")
