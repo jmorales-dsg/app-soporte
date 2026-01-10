@@ -11,7 +11,7 @@ def main(page: ft.Page):
     """Aplicación principal"""
     
     # VERSIÓN - cambiar con cada deploy para verificar
-    VERSION = "1.0.8"
+    VERSION = "1.0.9"
     
     # Configuración de la página
     page.title = f"PcGraf-Soporte v{VERSION}"
@@ -640,12 +640,59 @@ def main(page: ft.Page):
         page.clean()
         
         clientes = db.obtener_clientes()
+        clientes_filtrados = clientes.copy()
+        cliente_seleccionado = {"id": None, "nombre": ""}
         
-        dd_cliente = ft.Dropdown(
-            label="Cliente",
-            options=[ft.dropdown.Option(key=str(c['id']), text=c['nombre']) for c in clientes],
-            border_radius=10
+        # Campo de búsqueda
+        txt_buscar_cliente = ft.TextField(
+            label="🔍 Buscar Cliente",
+            border_radius=10,
+            on_change=lambda e: filtrar_clientes(e.control.value)
         )
+        
+        # Lista de clientes filtrados
+        lista_clientes = ft.ListView(height=150, spacing=2)
+        
+        def filtrar_clientes(texto):
+            nonlocal clientes_filtrados
+            texto = (texto or "").lower().strip()
+            if texto:
+                clientes_filtrados = [c for c in clientes if texto in c['nombre'].lower()]
+            else:
+                clientes_filtrados = clientes.copy()
+            actualizar_lista_clientes()
+        
+        def seleccionar_cliente(cliente):
+            cliente_seleccionado["id"] = cliente['id']
+            cliente_seleccionado["nombre"] = cliente['nombre']
+            txt_buscar_cliente.value = cliente['nombre']
+            txt_buscar_cliente.label = f"✅ Cliente: {cliente['nombre']}"
+            lista_clientes.visible = False
+            page.update()
+        
+        def actualizar_lista_clientes():
+            lista_clientes.controls.clear()
+            for c in clientes_filtrados[:20]:  # Máximo 20 resultados
+                lista_clientes.controls.append(
+                    ft.Container(
+                        content=ft.Text(c['nombre'], size=13),
+                        bgcolor="#f5f5f5",
+                        border_radius=5,
+                        padding=10,
+                        on_click=lambda e, cli=c: seleccionar_cliente(cli)
+                    )
+                )
+            lista_clientes.visible = len(clientes_filtrados) > 0
+            page.update()
+        
+        # Inicializar lista
+        actualizar_lista_clientes()
+        
+        # Contenedor de búsqueda de cliente
+        contenedor_cliente = ft.Column([
+            txt_buscar_cliente,
+            lista_clientes
+        ], spacing=5)
         
         hoy = date.today()
         primer_dia_mes = hoy.replace(day=1).strftime('%Y-%m-%d')
@@ -660,12 +707,12 @@ def main(page: ft.Page):
         
         def buscar(e):
             nonlocal visitas_resultado
-            if not dd_cliente.value:
-                mostrar_mensaje("Seleccione un cliente", True)
+            if not cliente_seleccionado["id"]:
+                mostrar_mensaje("Seleccione un cliente de la lista", True)
                 return
             
             visitas_resultado = db.obtener_visitas_cliente(
-                int(dd_cliente.value),
+                int(cliente_seleccionado["id"]),
                 txt_desde.value,
                 txt_hasta.value
             )
@@ -764,7 +811,7 @@ def main(page: ft.Page):
                 mostrar_mensaje("Primero busque boletas", True)
                 return
             
-            cliente = db.obtener_cliente(int(dd_cliente.value))
+            cliente = db.obtener_cliente(int(cliente_seleccionado["id"]))
             if not cliente.get('correo'):
                 mostrar_mensaje("El cliente no tiene correo", True)
                 return
@@ -805,7 +852,7 @@ def main(page: ft.Page):
             crear_appbar("Consultar Boletas"),
             ft.Container(
                 content=ft.Column([
-                    dd_cliente,
+                    contenedor_cliente,
                     ft.Row([txt_desde, txt_hasta], spacing=10),
                     ft.ElevatedButton("Buscar", icon=ft.Icons.SEARCH, bgcolor="#2196f3", color="white", width=float("inf"), on_click=buscar),
                     ft.Row([
