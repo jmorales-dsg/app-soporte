@@ -741,15 +741,30 @@ def main(page: ft.Page):
             )
             mostrar_mensaje(msg, not ok)
         
+        def exportar_pdf(e):
+            if not visitas_resultado:
+                mostrar_mensaje("Primero busque boletas", True)
+                return
+            
+            cliente = db.obtener_cliente(int(dd_cliente.value))
+            tiempo_total = db.calcular_tiempo_total(visitas_resultado)
+            
+            # Generar HTML del reporte para imprimir/PDF
+            html = correo.generar_html_reporte_imprimible(cliente, visitas_resultado, txt_desde.value, txt_hasta.value, tiempo_total)
+            
+            # Abrir en nueva ventana
+            page.launch_url(f"data:text/html;charset=utf-8,{html.replace('#', '%23').replace(' ', '%20')}")
+        
         page.add(
             crear_appbar("Consultar Boletas"),
             ft.Container(
                 content=ft.Column([
                     dd_cliente,
                     ft.Row([txt_desde, txt_hasta], spacing=10),
+                    ft.ElevatedButton("Buscar", icon=ft.Icons.SEARCH, bgcolor="#2196f3", color="white", width=float("inf"), on_click=buscar),
                     ft.Row([
-                        ft.ElevatedButton("Buscar", icon=ft.Icons.SEARCH, bgcolor="#2196f3", color="white", expand=True, on_click=buscar),
-                        ft.ElevatedButton("📧", bgcolor="#4caf50", color="white", on_click=enviar_reporte, tooltip="Enviar reporte por correo"),
+                        ft.ElevatedButton("📄 Exportar PDF", bgcolor="#ff9800", color="white", expand=True, on_click=exportar_pdf, tooltip="Descargar reporte como PDF"),
+                        ft.ElevatedButton("📧 Enviar Correo", bgcolor="#4caf50", color="white", expand=True, on_click=enviar_reporte, tooltip="Enviar reporte por correo"),
                     ], spacing=10),
                     lbl_resumen,
                     lista
